@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import os
 
-os.chdir('C:/Users/Jordi/Desktop/Economics/Kaggle/')
+os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/')
 
 
 train = pd.read_csv('train.csv')
@@ -31,6 +31,14 @@ x_train.isnull().sum() == 0
 #Select y train, SalePrice
 y_train = train.loc[:, train.columns == 'SalePrice']
 
+
+#split and prepare test data
+
+#these are the X's of the ID's we need to predict
+test_x = test.loc[:, test.columns != 'Id']
+
+#Id's for later's submission
+test_id = test.loc[:, test.columns == 'Id']
 
 # Initialize linear regression object
 from sklearn import datasets, linear_model
@@ -56,7 +64,7 @@ regr.fit(x_traindummy, y_train)
 
 
 
-regr.fit(newdf, y_train)
+#regr.fit(newdf, y_train)
 
 print ('Coefficients: \n', regr.coef_)
 
@@ -77,6 +85,42 @@ lreg = Lasso(alpha = 0.1)
 lreg.fit(x_traindummy, y_train)
 
 print ('Coefficients: \n', lreg.coef_)  #many coefs set to 0
+
+
+"""
+#convert test_x to dummies
+test_xdummy = pd.get_dummies(test_x)
+
+#fill NA's
+test_xdummy.fillna(test_xdummy.mean(), inplace=True)
+
+
+pred = lreg.predict(test_xdummy)
+"""
+
+########### 
+#Run a simple regression and prepare predictions
+########### 
+
+
+x_pred = train.loc[:, train.columns == 'OverallQual']
+test_pred = test_x.loc[:, test_x.columns == 'OverallQual']
+
+#Initializes OLS
+ols  = linear_model.LinearRegression()
+
+#Fits ols with selected variables from training and training target
+ols.fit(x_pred, y_train)
+
+#predicts, with OLS model, using the X's received for the test
+pred = ols.predict(test_pred)
+
+
+
+# paste Id and prediction for submission
+# https://www.geeksforgeeks.org/different-ways-to-create-pandas-dataframe/
+submission = [test_id, pred]
+
 
 # Training Logistic regression
 
