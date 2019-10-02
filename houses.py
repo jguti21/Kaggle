@@ -116,10 +116,18 @@ ols.fit(x_pred, y_train)
 pred = ols.predict(test_pred)
 
 
-
 # paste Id and prediction for submission
-# https://www.geeksforgeeks.org/different-ways-to-create-pandas-dataframe/
-submission = [test_id, pred]
+
+test_id.loc[:,1] = pred
+
+submission = test_id
+
+submission.columns = ["Id", "SalePrice"]
+
+
+submission.to_csv(r'Submission.csv', index = False)
+
+
 
 
 # Training Logistic regression
