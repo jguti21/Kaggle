@@ -10,6 +10,7 @@ import seaborn
 import numpy as np
 import pandas as pd
 import os
+from scipy.stats import pearsonr
 
 os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/')
 
@@ -26,11 +27,15 @@ x_train = train.loc[:, train.columns != 'Id']
 x_train = x_train.loc[:, x_train.columns != 'SalePrice']
 
 #NaNs
-x_train.isnull().sum() == 0
+x_train.isnull().sum()
 
 #Select y train, SalePrice
 y_train = train.loc[:, train.columns == 'SalePrice']
 
+pearsonr(train['LotArea'],train['SalePrice'])
+pearsonr(train['OverallQual'],train['SalePrice']).sort()
+
+sorted(train.corr(method='pearson')['SalePrice'])
 
 #split and prepare test data
 
