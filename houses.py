@@ -32,10 +32,10 @@ x_train.isnull().sum()
 #Select y train, SalePrice
 y_train = train.loc[:, train.columns == 'SalePrice']
 
-pearsonr(train['LotArea'],train['SalePrice'])
-pearsonr(train['OverallQual'],train['SalePrice']).sort()
+#pearsonr(train['LotArea'],train['SalePrice'])
+#pearsonr(train['OverallQual'],train['SalePrice']).sort()
 
-sorted(train.corr(method='pearson')['SalePrice'])
+#sorted(train.corr(method='pearson')['SalePrice'])
 
 #split and prepare test data
 
@@ -46,7 +46,7 @@ test_x = test.loc[:, test.columns != 'Id']
 test_id = test.loc[:, test.columns == 'Id']
 
 # Initialize linear regression object
-from sklearn import datasets, linear_model
+from sklearn import linear_model
 
 regr  = linear_model.LinearRegression()
 
@@ -133,7 +133,63 @@ submission.columns = ["Id", "SalePrice"]
 submission.to_csv(r'Submission.csv', index = False)
 
 
+"""
+#AdaBossting
+from sklearn.ensemble import AdaBoostClassifier
+abc = AdaBoostClassifier(n_estimators=600, learning_rate = 0.01)
 
+x_pred = train[['OverallQual', 'GrLivArea']]
+abc.fit(x_pred, y_train )
+
+
+#predicts, with model, using the X's received for the test
+pred = abc.predict(test_pred)
+
+
+# paste Id and prediction for submission
+
+test_id.loc[:,1] = pred
+
+submission = test_id
+
+submission.columns = ["Id", "SalePrice"]
+
+
+submission.to_csv(r'Submission.csv', index = False)
+
+"""
+
+#Gradient Boosting regression
+from sklearn.ensemble import GradientBoostingRegressor
+
+
+#Given values: n_estimators=500, max_depth = 4, learning_rate = 0.01, loss="ls"
+clf = GradientBoostingRegressor(n_estimators=600, max_depth = 5, learning_rate = 0.01, loss='ls', verbose=1)
+
+x_pred = train[['OverallQual', 'GrLivArea']]
+test_pred = test_x[['OverallQual', 'GrLivArea']]
+
+
+clf.fit(x_pred, y_train )
+
+#predicts, with model, using the X's received for the test
+pred = clf.predict(test_pred)
+
+
+# paste Id and prediction for submission
+
+#Id's for later's submission
+test_id = test.loc[:, test.columns == 'Id']
+test_id.loc[:,1] = pred
+
+submission = test_id
+
+submission.columns = ["Id", "SalePrice"]
+
+
+submission.to_csv(r'Submission.csv', index = False)
+
+"""
 
 # Training Logistic regression
 
@@ -242,3 +298,5 @@ abc.fit(x_train, y_train )
 fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_train, abc.predict(x_train), pos_label=1)
 auc_abc = sklearn.metrics.auc(fpr, tpr)
 auc_abc
+
+"""
