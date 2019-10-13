@@ -170,10 +170,19 @@ plt.show();
 
 
 
+# Plot SaleCondition and OverallQual
+import seaborn as sns
+sns.scatterplot(x = "SalePrice", y = "OverallQual", 
+                hue = "SaleCondition", 
+                data = train[train.SaleCondition != "Normal"])
 
-
-
-
+# Plot ExterCond and OverQual
+from pandas.api.types import CategoricalDtype
+cat_type = CategoricalDtype(categories = ["Po", "Fa", "TA", "Gd", "Ex"], 
+                            ordered = True)
+train["ExterCond"] = train["ExterCond"].astype(cat_type)
+sns.catplot(x = "OverallQual", y = "ExterCond", data = train)
+# suprisingly not linear ...
 
 
 
