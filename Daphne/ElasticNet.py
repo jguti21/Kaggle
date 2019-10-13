@@ -12,73 +12,7 @@ os.chdir(
     "C:/Users/daphn/Documents/Kaggle/house-prices-advanced-regression-techniques"
 )
 
-train = pd.read_csv("train.csv")
-
-# Variables to exclude
-exclusion = ['Neighborhood']
-train = train[[c for c in train.columns
-               if c not in exclusion]]
-
-# Isolate in list variables of the same types
-list_int = []
-list_float = []
-list_cat = []
-
-for x in train.columns:
-    if train[x].dtypes == "int64":
-        list_int.append(x)
-    elif train[x].dtypes == "float64":
-        list_float.append(x)
-    elif train[x].dtypes == "O":
-        list_cat.append(x)
-
-# Normalization of the floats
-from sklearn.preprocessing import StandardScaler
-
-scaler = StandardScaler()
-norm = scaler.fit_transform(train[train.columns.intersection(list_float)])
-norm = pd.DataFrame(norm, columns=list_float)
-
-### Train sample update
-train.update(norm)
-
-# Dealing with the categorical variables
-import category_encoders as ce
-from pandas.api.types import CategoricalDtype
-from sklearn.preprocessing import LabelEncoder
-
-len(list_cat)
-obs_lvl = {}
-for var in list_cat:
-    obs_lvl[var] = train[var].value_counts()
-# Give an order to variables with Cond or Qual in the name
-ordinal = [c for c in list_cat
-           if "Condition" not in c and
-           "Cond" in c or
-           "Qual" in c]
-
-cat_type = CategoricalDtype(categories=["NA", "Po", "Fa", "TA", "Gd", "Ex"],
-                            ordered=True)
-
-for var in ordinal:
-    train[var] = train[var].astype(cat_type)
-
-# Encode the ordinal variables
-encoder = ce.ordinal.OrdinalEncoder(verbose=1, cols=ordinal)
-train = encoder.fit_transform(train)
-
-# LabelEncoder for the rest of the categorical variable
-rest_var = set(list_cat).difference(ordinal)
-
-encoder = LabelEncoder()
-for var in rest_var:
-    train[var] = encoder.fit_transform(train[var].astype(str))
-
-# Checking the NAs
-Nas = train.isna().sum().where(lambda x: x > 0).dropna()
-Nas_var = list(Nas.index)
-# Float var. Set to 0
-final = train.fillna(0)
+final = pd.read_csv("final.csv")
 
 #### SAMPLE
 X = final.drop(columns="SalePrice")
@@ -228,7 +162,7 @@ parametersGrid = {"alpha": [0.0001, 0.001, 0.01, 0.1, 1, 10, 100],
                   "l1_ratio": np.arange(0.001, 1.0, 0.1)}
 
 grid = GridSearchCV(regr_En_cv, parametersGrid, scoring='r2', cv= 3
-                    
+
 grid.fit(X_train, y_train)
 pred_En_cv = regr_En_cv.predict(X_test)
 R2_En_cv = regr_En_cv.score(X_test, y_test)
@@ -247,3 +181,73 @@ plt.plot(regr_En.coef_,alpha=0.7, linestyle='none',marker='*',markersize=5,
 plt.ylabel('Coefficient Magnitude',fontsize=16)
 plt.legend(fontsize=13,loc=4)
 plt.show()
+
+
+
+
+
+# Ali Furkan Kalay
+def test(models, data, iterations = 100):
+    results = {}
+    for i in models:
+        r2_train = []
+        r2_test = []
+        for j in range(iterations):
+            X_train, X_test, y_train, y_test = train_test_split(data[X],
+                                                                data[Y],
+                                                                test_size= 0.2)
+            r2_test.append(metrics.r2_score(y_test,
+                                            models[i].fit(X_train,
+                                                         y_train).predict(X_test)))
+            r2_train.append(metrics.r2_score(y_train,
+                                             models[i].fit(X_train,
+                                                          y_train).predict(X_train)))
+        results[i] = [np.mean(r2_train), np.mean(r2_test)]
+    return pd.DataFrame(results)
+
+
+from sklearn import linear_model
+from sklearn import metrics
+
+models = {'OLS': linear_model.LinearRegression(),
+         'Lasso': linear_model.Lasso(),
+         'Ridge': linear_model.Ridge(),
+
+X = list(final.drop(columns="SalePrice").columns)
+Y = ["SalePrice"]
+
+test(models, final)
+
+
+lasso_params = {'alpha':[0.02, 0.024, 0.025, 0.026, 0.03]}
+ridge_params = {'alpha':[200, 230, 250,265, 270, 275, 290, 300, 500]}
+
+models2 = {'OLS': linear_model.LinearRegression(),
+           'Lasso': GridSearchCV(linear_model.Lasso(),
+                               param_grid=lasso_params).fit(final[X], final[Y]).best_estimator_,
+           'Ridge': GridSearchCV(linear_model.Ridge(),
+                               param_grid=ridge_params).fit(final[X], final[Y]).best_estimator_,}
+
+test(models2, final)
+
+# Poly features added
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import PolynomialFeatures
+
+lasso_params = {'fit__alpha':[0.005, 0.02, 0.03, 0.05, 0.06]}
+ridge_params = {'fit__alpha':[550, 580, 600, 620, 650]}
+
+pipe1 = Pipeline([('poly', PolynomialFeatures()),
+                 ('fit', linear_model.LinearRegression())])
+pipe2 = Pipeline([('poly', PolynomialFeatures()),
+                 ('fit', linear_model.Lasso())])
+pipe3 = Pipeline([('poly', PolynomialFeatures()),
+                 ('fit', linear_model.Ridge())])
+
+models3 = {'OLS': pipe1,
+           'Lasso': GridSearchCV(pipe2,
+                                 param_grid=lasso_params).fit(final[X], final[Y]).best_estimator_ ,
+           'Ridge': GridSearchCV(pipe3,
+                                 param_grid=ridge_params).fit(final[X], final[Y]).best_estimator_,}
+
+test(models3, final)
