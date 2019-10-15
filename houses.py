@@ -16,18 +16,171 @@ os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/')
 
 
 train = pd.read_csv('train.csv')
+
+
+
 test = pd.read_csv('test.csv')
 sample = pd.read_csv('sample_submission.csv')
 
 
-train.head(6)
+#######################################
+# clean train
+#######################################
 
+# Variables to exclude
+exclusion = ['Neighborhood']
+train = train[[c for c in train.columns
+               if c not in exclusion]]
+
+# Isolate in list variables of the same types
+list_int = []
+list_float = []
+list_cat = []
+
+for x in train.columns:
+    if train[x].dtypes == "int64":
+        list_int.append(x)
+    elif train[x].dtypes == "float64":
+        list_float.append(x)
+    elif train[x].dtypes == "O":
+        list_cat.append(x)
+
+# Normalization of the floats
+from sklearn.preprocessing import StandardScaler
+
+train = train.fillna(0)
+
+scaler = StandardScaler()
+norm = scaler.fit_transform(train[train.columns.intersection(list_float)])
+norm = pd.DataFrame(norm, columns=list_float)
+
+### Train sample update
+train.update(norm)
+
+# Dealing with the categorical variables
+"""
+SET HTTPS_PROXY=https://ap-python-proxy:x2o7rCPYuN1JuV8H@p-gw.ecb.de:9090
+
+pip install --trusted-host pypi.org category-encoders
+"""
+
+
+import category_encoders as ce
+from pandas.api.types import CategoricalDtype
+from sklearn.preprocessing import LabelEncoder
+
+len(list_cat)
+obs_lvl = {}
+for var in list_cat:
+    obs_lvl[var] = train[var].value_counts()
+# Give an order to variables with Cond or Qual in the name
+ordinal = [c for c in list_cat
+           if "Condition" not in c and
+           "Cond" in c or
+           "Qual" in c]
+
+cat_type = CategoricalDtype(categories=["NA", "Po", "Fa", "TA", "Gd", "Ex"],
+                            ordered=True)
+
+for var in ordinal:
+    train[var] = train[var].astype(cat_type)
+
+# Encode the ordinal variables
+encoder = ce.ordinal.OrdinalEncoder(verbose=1, cols=ordinal)
+train = encoder.fit_transform(train)
+
+# LabelEncoder for the rest of the categorical variable
+rest_var = set(list_cat).difference(ordinal)
+
+encoder = LabelEncoder()
+for var in rest_var:
+    train[var] = encoder.fit_transform(train[var].astype(str))
+
+
+
+#######################################
+# clean train done
+#######################################
+    
+    
+    
+#######################################
+# clean test
+#######################################
+
+    
+# Variables to exclude
+exclusion = ['Neighborhood']
+test = test[[c for c in test.columns
+               if c not in exclusion]]
+
+# Isolate in list variables of the same types
+list_int = []
+list_float = []
+list_cat = []
+
+for x in test.columns:
+    if test[x].dtypes == "int64":
+        list_int.append(x)
+    elif test[x].dtypes == "float64":
+        list_float.append(x)
+    elif test[x].dtypes == "O":
+        list_cat.append(x)
+
+# Normalization of the floats
+
+test = test.fillna(0)
+
+scaler = StandardScaler()
+norm = scaler.fit_transform(test[test.columns.intersection(list_float)])
+norm = pd.DataFrame(norm, columns=list_float)
+
+### Test sample update
+test.update(norm)
+
+# Dealing with the categorical variables
+
+len(list_cat)
+obs_lvl = {}
+for var in list_cat:
+    obs_lvl[var] = test[var].value_counts()
+# Give an order to variables with Cond or Qual in the name
+ordinal = [c for c in list_cat
+           if "Condition" not in c and
+           "Cond" in c or
+           "Qual" in c]
+
+cat_type = CategoricalDtype(categories=["NA", "Po", "Fa", "TA", "Gd", "Ex"],
+                            ordered=True)
+
+for var in ordinal:
+    test[var] = test[var].astype(cat_type)
+
+# Encode the ordinal variables
+encoder = ce.ordinal.OrdinalEncoder(verbose=1, cols=ordinal)
+test = encoder.fit_transform(test)
+
+# LabelEncoder for the rest of the categorical variable
+rest_var = set(list_cat).difference(ordinal)
+
+encoder = LabelEncoder()
+for var in rest_var:
+    test[var] = encoder.fit_transform(test[var].astype(str))
+
+    
+    
+#######################################
+# clean test done
+#######################################
+    
+    
+ 
+"""   
 #Select the X´s by removing Id and SalePrice
 x_train = train.loc[:, train.columns != 'Id']
 x_train = x_train.loc[:, x_train.columns != 'SalePrice']
 
-#NaNs
-x_train.isnull().sum()
+
 
 #Select y train, SalePrice
 y_train = train.loc[:, train.columns == 'SalePrice']
@@ -54,14 +207,8 @@ regr  = linear_model.LinearRegression()
 # Train the model
 
 
-#get dummies for categorical variables
-x_traindummy = pd.get_dummies(x_train)
 
-# fill missing values with mean column values
-x_traindummy.fillna(x_traindummy.mean(), inplace=True)
-
-
-regr.fit(x_traindummy, y_train)
+regr.fit(x_train, y_train)
 
 #numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
 
@@ -78,7 +225,7 @@ print ('Coefficients: \n', regr.coef_)
 #Ridge Regression
 from sklearn.linear_model import Ridge
 rreg = Ridge(alpha = 0.001)
-rreg.fit(x_traindummy, y_train)
+rreg.fit(x_train, y_train)
 
 print ('Coefficients: \n', rreg.coef_)
 
@@ -87,12 +234,11 @@ from sklearn.linear_model import Lasso
 
 lreg = Lasso(alpha = 0.1)
 
-lreg.fit(x_traindummy, y_train)
+lreg.fit(x_train, y_train)
 
 print ('Coefficients: \n', lreg.coef_)  #many coefs set to 0
 
 
-"""
 #convert test_x to dummies
 test_xdummy = pd.get_dummies(test_x)
 
@@ -101,15 +247,15 @@ test_xdummy.fillna(test_xdummy.mean(), inplace=True)
 
 
 pred = lreg.predict(test_xdummy)
-"""
+
 
 ########### 
 #Run a simple regression and prepare predictions
 ########### 
 
 
-x_pred = train.loc[:, train.columns == 'OverallQual']
-test_pred = test_x.loc[:, test_x.columns == 'OverallQual']
+x_pred = train[['OverallQual', 'GrLivArea']]
+test_pred = test_x[['OverallQual', 'GrLivArea']]
 
 #Initializes OLS
 ols  = linear_model.LinearRegression()
@@ -122,63 +268,6 @@ pred = ols.predict(test_pred)
 
 
 # paste Id and prediction for submission
-
-test_id.loc[:,1] = pred
-
-submission = test_id
-
-submission.columns = ["Id", "SalePrice"]
-
-
-submission.to_csv(r'Submission.csv', index = False)
-
-
-"""
-#AdaBossting
-from sklearn.ensemble import AdaBoostClassifier
-abc = AdaBoostClassifier(n_estimators=600, learning_rate = 0.01)
-
-x_pred = train[['OverallQual', 'GrLivArea']]
-abc.fit(x_pred, y_train )
-
-
-#predicts, with model, using the X's received for the test
-pred = abc.predict(test_pred)
-
-
-# paste Id and prediction for submission
-
-test_id.loc[:,1] = pred
-
-submission = test_id
-
-submission.columns = ["Id", "SalePrice"]
-
-
-submission.to_csv(r'Submission.csv', index = False)
-
-"""
-
-#Gradient Boosting regression
-from sklearn.ensemble import GradientBoostingRegressor
-
-
-#Given values: n_estimators=500, max_depth = 4, learning_rate = 0.01, loss="ls"
-clf = GradientBoostingRegressor(n_estimators=600, max_depth = 5, learning_rate = 0.01, loss='ls', verbose=1)
-
-x_pred = train[['OverallQual', 'GrLivArea']]
-test_pred = test_x[['OverallQual', 'GrLivArea']]
-
-
-clf.fit(x_pred, y_train )
-
-#predicts, with model, using the X's received for the test
-pred = clf.predict(test_pred)
-
-
-# paste Id and prediction for submission
-
-#Id's for later's submission
 test_id = test.loc[:, test.columns == 'Id']
 test_id.loc[:,1] = pred
 
@@ -188,6 +277,51 @@ submission.columns = ["Id", "SalePrice"]
 
 
 submission.to_csv(r'Submission.csv', index = False)
+
+"""
+
+#################################
+#Gradient Boosting regression
+#################################
+from sklearn.ensemble import GradientBoostingRegressor
+
+#X's from test data used to predict
+x_test = test.loc[:, test.columns != 'Id']
+
+#Id for later's submission
+test_id = test.loc[:, test.columns == 'Id']
+
+#Target to predict in training
+y_train = train.loc[:, train.columns == 'SalePrice']
+
+
+#Given values: n_estimators=500, max_depth = 4, learning_rate = 0.01, loss="ls"
+clf = GradientBoostingRegressor(n_estimators=600, max_depth = 5, learning_rate = 0.01, loss='ls', verbose=1)
+
+#X's used to predict in training
+x_train = train.loc[:, train.columns != 'Id']
+x_train = x_train.loc[:, x_train.columns != 'SalePrice']
+
+
+
+clf.fit(x_pred, y_train)
+
+#predicts, with model, using the X's received for the test
+pred = clf.predict(x_test)
+
+
+# paste Id and prediction for submission
+
+#add prediction to second column of test_id
+test_id.loc[:,1] = pred
+
+#rename
+submission = test_id
+submission.columns = ["Id", "SalePrice"]
+
+
+submission.to_csv(r'Submission.csv', index = False)
+
 
 """
 
@@ -298,5 +432,32 @@ abc.fit(x_train, y_train )
 fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_train, abc.predict(x_train), pos_label=1)
 auc_abc = sklearn.metrics.auc(fpr, tpr)
 auc_abc
+
+"""
+
+
+"""
+#AdaBossting
+from sklearn.ensemble import AdaBoostClassifier
+abc = AdaBoostClassifier(n_estimators=600, learning_rate = 0.01)
+
+x_pred = train[['OverallQual', 'GrLivArea']]
+abc.fit(x_pred, y_train )
+
+
+#predicts, with model, using the X's received for the test
+pred = abc.predict(test_pred)
+
+
+# paste Id and prediction for submission
+
+test_id.loc[:,1] = pred
+
+submission = test_id
+
+submission.columns = ["Id", "SalePrice"]
+
+
+submission.to_csv(r'Submission.csv', index = False)
 
 """
