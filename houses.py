@@ -304,7 +304,7 @@ x_train = x_train.loc[:, x_train.columns != 'SalePrice']
 
 
 
-clf.fit(x_pred, y_train)
+clf.fit(x_train, y_train)
 
 #predicts, with model, using the X's received for the test
 pred = clf.predict(x_test)
@@ -322,6 +322,44 @@ submission.columns = ["Id", "SalePrice"]
 
 submission.to_csv(r'Submission.csv', index = False)
 
+
+##########################
+# parameter tuning
+##########################
+
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import make_scorer
+#from math import sqrt
+
+mean_squared_error = make_scorer(mean_squared_error)
+#rms = sqrt(mean_squared_error(y_actual, y_predicted))
+
+def model_gradient_boosting_tree(Xtrain,Xtest,ytrain):
+    
+    X_train = Xtrain
+    y_train = ytrain 
+    gbr = GradientBoostingRegressor(random_state=0)
+    param_grid = {
+        'n_estimators': [800,1500],
+        'max_features': [20,15],
+	    'max_depth': [8,10],
+        'learning_rate': [0.1],
+       'subsample': [1]
+    }
+    model = GridSearchCV(estimator=gbr, param_grid=param_grid, n_jobs=1, cv=10, scoring=mean_squared_error)
+    model.fit(X_train, y_train)
+    print('Gradient boosted tree regression...')
+    print('Best Params:')
+    print(model.best_params_)
+    print('Best CV Score:')
+    print(-model.best_score_)
+
+    y_pred = model.predict(Xtest)
+    return y_pred, -model.best_score_
+
+
+pred = model_gradient_boosting_tree(x_train,x_test,y_train)
 
 """
 
