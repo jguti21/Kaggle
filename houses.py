@@ -283,6 +283,8 @@ submission.to_csv(r'Submission.csv', index = False)
 #################################
 #Gradient Boosting regression
 #################################
+
+"""
 from sklearn.ensemble import GradientBoostingRegressor
 
 #X's from test data used to predict
@@ -297,12 +299,11 @@ y_train = train.loc[:, train.columns == 'SalePrice']
 
 #Given values: n_estimators=500, max_depth = 4, learning_rate = 0.01, loss="ls"
 clf = GradientBoostingRegressor(n_estimators=600, max_depth = 5, learning_rate = 0.01, loss='ls', verbose=1)
+clf = GradientBoostingRegressor(n_estimators=700, max_depth = 6, learning_rate = 0.1, loss='ls', verbose=1)
 
 #X's used to predict in training
 x_train = train.loc[:, train.columns != 'Id']
 x_train = x_train.loc[:, x_train.columns != 'SalePrice']
-
-
 
 clf.fit(x_train, y_train)
 
@@ -321,12 +322,40 @@ submission.columns = ["Id", "SalePrice"]
 
 
 submission.to_csv(r'Submission.csv', index = False)
-
+"""
 
 ##########################
 # parameter tuning
 ##########################
 
+
+
+##################
+# data preparation
+##################
+
+#x_train = train[['OverallQual', 'GrLivArea']]
+#x_test = test[['OverallQual', 'GrLivArea']]
+
+#X's from test data used to predict
+x_test = test.loc[:, test.columns != 'Id']
+
+#Id for later's submission
+test_id = test.loc[:, test.columns == 'Id']
+
+#Target to predict in training
+y_train = train.loc[:, train.columns == 'SalePrice']
+
+#X's used to predict in training
+x_train = train.loc[:, train.columns != 'Id']
+x_train = x_train.loc[:, x_train.columns != 'SalePrice']
+
+
+###############
+# modelling
+###############
+
+from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import make_scorer
@@ -339,13 +368,13 @@ def model_gradient_boosting_tree(Xtrain,Xtest,ytrain):
     
     X_train = Xtrain
     y_train = ytrain 
-    gbr = GradientBoostingRegressor(random_state=0)
+    gbr = GradientBoostingRegressor(random_state=0, loss='ls')
     param_grid = {
-        'n_estimators': [800,1500],
-        'max_features': [20,15],
-	    'max_depth': [8,10],
-        'learning_rate': [0.1],
-       'subsample': [1]
+        'n_estimators': [500,600,700,800],
+       # 'max_features': [20,15],
+	    'max_depth': [3,4,5,6],
+        'learning_rate': [0.01, 0.1],
+       'subsample': [1, 0.7, 0.8]
     }
     model = GridSearchCV(estimator=gbr, param_grid=param_grid, n_jobs=1, cv=10, scoring=mean_squared_error)
     model.fit(X_train, y_train)
@@ -353,13 +382,27 @@ def model_gradient_boosting_tree(Xtrain,Xtest,ytrain):
     print('Best Params:')
     print(model.best_params_)
     print('Best CV Score:')
-    print(-model.best_score_)
+    print(model.best_score_)
 
     y_pred = model.predict(Xtest)
-    return y_pred, -model.best_score_
-
+    return y_pred, model.best_score_
 
 pred = model_gradient_boosting_tree(x_train,x_test,y_train)
+
+#Best CV Score:
+#1994522269.359976
+
+#add prediction to second column of test_id
+test_id = test.loc[:, test.columns == 'Id']
+test_id.loc[:,1] = pred[0]
+
+#rename
+submission = test_id
+submission.columns = ["Id", "SalePrice"]
+
+
+submission.to_csv(r'Submission.csv', index = False)
+
 
 """
 
