@@ -1,26 +1,26 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Sep 29 16:32:42 2019
-
-@author: daphn
-"""
-
-## IMPORT
-
+########################################################################################################################
+##################                                  IMPORT MODULES                                    ##################
+########################################################################################################################
 import numpy as np
 import os
 import pandas as pd
 
+########################################################################################################################
+##################                                 LOADING THE DATA                                   ##################
+########################################################################################################################
 os.chdir(
         "C:/Users/daphn/Documents/Kaggle/house-prices-advanced-regression-techniques"
          )
 
 train = pd.read_csv("train.csv")
 
-# Variables to exclude
-exclusion = ['Neighborhood']
+exclusion = ['Neighborhood', "Id", "Alley"]
 train = train[[c for c in train.columns
                if c not in exclusion]]
+
+########################################################################################################################
+##################                           VARIABLE IDENTIFICATION                                   ##################
+########################################################################################################################
 
 # Isolate in list variables of the same types
 list_int = []
@@ -35,6 +35,9 @@ for x in train.columns:
     elif train[x].dtypes == "O":
         list_cat.append(x)
 
+########################################################################################################################
+##################                           FLOATS                                   ##################
+########################################################################################################################
 # Normalization of the floats
 from sklearn.preprocessing import StandardScaler
 
@@ -45,7 +48,9 @@ norm = pd.DataFrame(norm, columns=list_float)
 ### Train sample update
 train.update(norm)
 
-# Dealing with the categorical variables
+########################################################################################################################
+##################                           CATEGORICALS                                   ##################
+########################################################################################################################
 import category_encoders as ce
 from pandas.api.types import CategoricalDtype
 from sklearn.preprocessing import LabelEncoder
@@ -77,10 +82,65 @@ encoder = LabelEncoder()
 for var in rest_var:
     train[var] = encoder.fit_transform(train[var].astype(str))
 
-# Checking the NAs
+
+# Standardization of the categoricals
+scaler = StandardScaler()
+norm = scaler.fit_transform(train[train.columns.intersection(list_cat)])
+norm = pd.DataFrame(norm, columns = list_cat)
+### Train sample update
+train.update(norm)
+
+########################################################################################################################
+##################                           INT                                   ##################
+########################################################################################################################
+
+# Standardization of the integer variables
+scaler = StandardScaler()
+list_int.remove("SalePrice")
+norm = scaler.fit_transform(train[train.columns.intersection(list_int)])
+norm = pd.DataFrame(norm, columns = list_int)
+### Train sample update
+train.update(norm)
+
+########################################################################################################################
+##################                           NULLS                                   ##################
+########################################################################################################################
 Nas = train.isna().sum().where(lambda x: x > 0).dropna()
 Nas_var = list(Nas.index)
-# Float var. Set to 0
-final = train.fillna(0)
+# Float var. Set to
+train = train.fillna(0)
 
-final.to_csv("final.csv")
+########################################################################################################################
+##################                        CREATION OF MULTITUDE OF VAR                                ##################
+########################################################################################################################
+columns_to_user = list(train.columns)
+columns_to_user.remove("SalePrice")
+# SQUARE OF EVERYTHING
+for col in columns_to_user:
+    train[col + "_sqrt"] = train[col] ** 2
+
+# Cube of everything
+for col in columns_to_user:
+    train[col + "_cube"] = train[col] ** 3
+
+########################################################################################################################
+##################                          DE-MEANING THE SALEPRICE                                  ##################
+########################################################################################################################
+
+train["SalePrice"] = train["SalePrice"] - np.mean(train["SalePrice"])
+
+
+########################################################################################################################
+##################                           OUTLIERS DETECTION                                    ##################
+########################################################################################################################
+from sklearn.neighbors import LocalOutlierFactor
+
+neighbors = LocalOutlierFactor().fit_predict(train)
+train["outlier"] = neighbors
+train.head(5)
+train = train[train["outlier"] == 1] # 1 are inlier
+########################################################################################################################
+##################                           SAVE                                   ##################
+########################################################################################################################
+
+train.to_csv("final.csv")
