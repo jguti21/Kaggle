@@ -6,8 +6,8 @@ Created on Sun Nov 17 19:56:55 2019
 """
 
 
-import sklearn
-import seaborn
+import sklearn 
+import seaborn as sns
 import numpy as np
 import pandas as pd
 import os
@@ -63,15 +63,66 @@ for x in train.columns:
     elif train[x].dtypes == "O":
         list_cat.append(x)
 
+train.dtypes
+#object = strings
+
+
 # Normalization of the floats
 from sklearn.preprocessing import StandardScaler
 
 
-
+#No nulls
 train.isnull().sum()
 
+#Many duplicates
+train.duplicated().sum()
 
-train = train.fillna(train.mean())
+train.drop_duplicates(inplace=True)
+
+
+train.hist(bins=2)
+
+#train.plot.kde()
+
+sns.distplot(train['X'], hist=True, kde=True, 
+             bins=int(180/5), color = 'darkblue', 
+             hist_kws={'edgecolor':'black'},
+             kde_kws={'linewidth': 4})
+
+
+sns.distplot(train['Y'], hist=True, kde=True, 
+             bins=int(180/5), color = 'darkblue', 
+             hist_kws={'edgecolor':'black'},
+             kde_kws={'linewidth': 4})
+
+
+train.replace({'X': -120.5, 'Y': 90.0}, np.NaN, inplace=True)
+test.replace({'X': -120.5, 'Y': 90.0}, np.NaN, inplace=True)
+
+#train = train.fillna(train.mean())
+
+from sklearn.preprocessing import LabelEncoder
+le2 = LabelEncoder()
+y = le2.fit_transform(train.pop('Category'))
+
+import lightgbm as lgb
+train_set = lgb.Dataset(
+    train, label=y, categorical_feature=['PdDistrict'], free_raw_data=False)
+
+
+train_set = lgb.Dataset(
+    train['X','Y'], label=y)
+
+
+
+params = {
+    'objective': 'multiclass',
+    'num_class': 39
+}
+
+
+cv_results = lgb.cv(params, train_set, metrics='multi_logloss', early_stopping_rounds=10)
+
 
 scaler = StandardScaler()
 norm = scaler.fit_transform(train[train.columns.intersection(list_float)])
