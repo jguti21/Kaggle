@@ -105,6 +105,26 @@ from sklearn.preprocessing import LabelEncoder
 le2 = LabelEncoder()
 y = le2.fit_transform(train.pop('Category'))
 
+x = le2.fit_transform(train.pop('PdDistrict'))
+
+x = x.reshape(-1,1)
+
+
+#https://chrisalbon.com/machine_learning/naive_bayes/multinomial_logistic_regression/
+
+from sklearn.linear_model import LogisticRegression
+
+# Create one-vs-rest logistic regression object
+clf = LogisticRegression(random_state=0, multi_class='multinomial', solver='newton-cg')
+
+
+# Train model
+model = clf.fit(x, y)
+
+# Predict class
+model.predict(test.pop('PdDistrict'))
+
+
 import lightgbm as lgb
 train_set = lgb.Dataset(
     train, label=y, categorical_feature=['PdDistrict'], free_raw_data=False)
