@@ -28,9 +28,9 @@ def add_identity(axes, *line_args, **line_kwargs):
     return axes
 
 
-#os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/')
+os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/CrimeSF')
 
-os.chdir('C:/Users/Jordi/Desktop/Economics/Kaggle/CrimeSF')
+#os.chdir('C:/Users/Jordi/Desktop/Economics/Kaggle/CrimeSF')
 
 train = pd.read_csv('train.csv')
 
@@ -119,10 +119,35 @@ clf = LogisticRegression(random_state=0, multi_class='multinomial', solver='newt
 
 
 # Train model
-model = clf.fit(x, y)
+#model = clf.fit(x, y)
 
-# Predict class
-model.predict(test.pop('PdDistrict'))
+
+from sklearn.naive_bayes import GaussianNB
+
+gnb = GaussianNB()
+model = gnb.fit(x,y)
+
+
+#predict
+x_test = le2.fit_transform(test.pop('PdDistrict'))
+x_test = x_test.reshape(-1,1)
+
+pred = gnb.predict(x_test)
+
+############## Create submission
+
+
+#add prediction to second column of test_id
+test_id = test.loc[:, test.columns == 'Id']
+test_id.loc[:,1] = pred
+
+#test_id.loc[:,1] = preds[0]
+#rename
+submission = test_id
+submission.columns = ["Id", "SalePrice"]
+
+
+
 
 
 import lightgbm as lgb
