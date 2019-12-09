@@ -14,7 +14,7 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 
-os.chdir('C:/Users/Jordi/Desktop/Economics/Kaggle/CrimeSF')
+os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/CrimeSF')
 
 
 train = pd.read_csv("train.csv")
@@ -57,8 +57,27 @@ test["PdDistrict"] = test["PdDistrict"].replace(data_dict_district)
 train = train.drop(['Resolution'], axis = 1)
 
 
-#knn on numeric columns
+############ Process and get weather data
+"""
+train['Date']=pd.to_datetime(train['Dates'].dt.strftime('%Y-%m-%d'),format='%Y-%m-%d')
+test['Date']=pd.to_datetime(test['Dates'].dt.strftime('%Y-%m-%d'),format='%Y-%m-%d')
 
+# Preprocessing weather data
+weather_data = pd.read_csv("weather.csv")
+weather_data["Date"]= weather_data["Date"].str.replace(" ", "")
+weather_data["Date"] = pd.to_datetime(weather_data["Date"],format='%Y-%m-%d')
+
+weather_data.columns = ['t_max','t_avg','t_min','dew_max','dew_avg','dew_min','hum_max',
+                        'hum_avg','hum_min','wind_max','wind_avg','wind_min','pres_max','pres_avg','pres_min','percip','Date']
+
+
+
+train=pd.merge(train, weather_data, on ="Date", how="left")
+test=pd.merge(test, weather_data, on ="Date", how="left")
+
+"""
+
+#####
 features = ["DayOfWeek", "PdDistrict",  "X", "Y"]
 X_train = train[features]
 y_train = train["Category"]
@@ -68,6 +87,8 @@ from sklearn.neighbors import KNeighborsClassifier
 knn = KNeighborsClassifier(n_neighbors=5)
 knn.fit(X_train, y_train)
 predictions = knn.predict(X_test)
+
+predictions_knn_proba = knn.predict(X_test)
 
 from collections import OrderedDict
 data_dict_new = OrderedDict(sorted(data_dict.items()))
@@ -97,6 +118,7 @@ lgr = LogisticRegression()
 lgr.fit(X_train, y_train)
 predictions = lgr.predict(X_test)
 
+predictions_log_proba = lgr.predict_proba(X_test)
 
 data_dict_new = OrderedDict(sorted(data_dict.items()))
 
@@ -132,6 +154,8 @@ model = gnb.fit(X_train,y_train)
 #predict
 
 pred = gnb.predict(X_test)
+
+predictions_nb_proba = gnb.predict_proba(X_test)
 
 data_dict_new = OrderedDict(sorted(data_dict.items()))
 
@@ -184,4 +208,27 @@ result_dataframe.to_csv("submission_vote.csv", index=False)
 
 
 ##############################################################################
+
+
+#Average of probability predictions of logarithmic and nb
+
+#concatenates both dataframes (rbind), groups by row, and computes the mean 
+p = pd.concat([pd.DataFrame(predictions_log_proba), pd.DataFrame(predictions_nb_proba)]).groupby(level=0).mean()
+
+data_dict["Key"]
+print(data_dict.keys())
+
+p.columns = data_dict.keys()
+
+p['Id'] = p.index
+
+p_id = p['Id']
+
+p.drop('Id', axis = 1, inplace = True)
+
+p.insert(0, 'Id', p_id)
+
+p.to_csv("submission_avg.csv", index = True)
+
+#https://www.dataquest.io/blog/introduction-to-ensembles/
 
