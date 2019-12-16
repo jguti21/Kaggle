@@ -16,7 +16,7 @@ import pandas as pd
 
 #os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/CrimeSF')
 
-os.chdir('C:/Users/Train11/Desktop/Kaggle')
+os.chdir('C:/Users/Jordi/Desktop/Economics/Kaggle/CrimeSF')
 
 train = pd.read_csv("train.csv", parse_dates=['Dates'])
 
@@ -325,10 +325,7 @@ gnb = GaussianNB()
 lgr = LogisticRegression()
 
 
-
-
-
-
+from sklearn.model_selection import train_test_split, StratifiedKFold
 
 ###############  
 #Stacking
@@ -356,3 +353,36 @@ def Stacking(model,train,y,test,n_fold):
     return test_pred.reshape(-1,1),train_pred
 
 
+model1 = abc
+
+test_pred1 ,train_pred1=Stacking(model=model1,n_fold=10, train=X_train,test=X_test,y=y_train)
+
+train_pred1=pd.DataFrame(train_pred1)
+test_pred1=pd.DataFrame(test_pred1)
+
+model2 = RandomForestClassifier()
+
+test_pred2 ,train_pred2=Stacking(model=model2,n_fold=10,train=X_train,test=X_test,y=y_train)
+
+train_pred2=pd.DataFrame(train_pred2)
+test_pred2=pd.DataFrame(test_pred2)
+
+
+model3 = GaussianNB()
+
+test_pred3, train_pred3=Stacking(model=model3,n_fold=10,train=X_train,test=X_test,y=y_train)
+
+
+train_pred3=pd.DataFrame(train_pred3)
+test_pred3=pd.DataFrame(test_pred3)
+
+
+df = pd.concat([train_pred1, train_pred2, train_pred3], axis=1)
+df_test = pd.concat([test_pred1, test_pred2, test_pred3], axis=1)
+
+model = LogisticRegression(random_state=1)
+model.fit(df,y_train)
+model.score(df_test, y_test)
+
+
+model_proba = model.predict_proba(X_test)
