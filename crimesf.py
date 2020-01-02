@@ -14,9 +14,9 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 
-#os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/CrimeSF')
+os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/CrimeSF')
 
-os.chdir('C:/Users/Jordi/Desktop/Economics/Kaggle/CrimeSF')
+#os.chdir('C:/Users/Jordi/Desktop/Economics/Kaggle/CrimeSF')
 
 train = pd.read_csv("train.csv", parse_dates=['Dates'])
 
@@ -198,6 +198,7 @@ gnb.fit(X_train,y_train)
 
 pred = gnb.predict(X_test)
 
+predictions_nb_proba_train = gnb.predict_proba(X_train)
 predictions_nb_proba = gnb.predict_proba(X_test)
 
 data_dict_new = OrderedDict(sorted(data_dict.items()))
@@ -261,6 +262,7 @@ from sklearn.ensemble import AdaBoostClassifier
 abc = AdaBoostClassifier()
 abc.fit(X_train, y_train)
 
+predictions_abc_proba_train = abc.predict_proba(X_train)
 predictions_abc_proba = abc.predict_proba(X_test)
 
 
@@ -276,6 +278,7 @@ from sklearn.model_selection import cross_val_score
 random_forest = RandomForestClassifier()
 random_forest.fit(X_train, y_train)
 
+predictions_rf_proba_train = random_forest.predict_proba(X_train)
 
 predictions_rf_proba = random_forest.predict_proba(X_test)
 
@@ -318,6 +321,72 @@ p.to_csv("submission_avg.csv", index = False)
 
 
 ##############################################################################
+# New Stacking: https://towardsdatascience.com/automate-stacking-in-python-fc3e7834772e
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import AdaBoostClassifier
+
+from vecstack import stacking
+
+X_train = train[features]
+y_train = train["Category"]
+X_test = test[features]
+
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+
+models = [
+        AdaBoostClassifier(),
+        RandomForestClassifier(),
+        GaussianNB()
+]
+
+
+S_train, S_test = stacking(models, X_train, y_train, X_test, regression=False, mode='oof_pred_bag',
+                           
+                           needs_proba=True, save_dir=None, metric=accuracy_score,  n_folds=4,
+         
+                           stratified=True,  shuffle=True,  random_state=0,  verbose=0)
+
+
+model = XGBClassifier()
+    
+model = model.fit(S_train, y_train)
+y_pred = model.predict_proba(S_test)
+
+
+p.columns = data_dict.keys()
+
+p['Id'] = p.index
+
+p_id = p['Id']
+
+p.drop('Id', axis = 1, inplace = True)
+
+p.insert(0, 'Id', p_id)
+
+p.to_csv("submission_stack.csv", index = False)
+
+
+#print('Final prediction score: [%.8f]' % accuracy_score(y_test, y_pred))
+
+"""
+
+###############  
+#Stacking
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import RandomForestClassifier
+
 
 abc = AdaBoostClassifier()
 random_forest = RandomForestClassifier()
@@ -327,8 +396,8 @@ lgr = LogisticRegression()
 
 from sklearn.model_selection import train_test_split, StratifiedKFold
 
-###############  
-#Stacking
+
+
 features = ["DayOfWeek", "PdDistrict",  "X", "Y", "PC1", "PC2", "PC3"]
 X_train = train[features]
 y_train = train["Category"]
@@ -337,7 +406,7 @@ X_test = test[features]
 
 X_train, X_test, y_train, y_test = train_test_split(train[features], train["Category"], test_size=0.33, random_state=42)
 
-
+"""
 def Stacking(model,train,y,test,n_fold):
     folds=StratifiedKFold(n_splits=n_fold,random_state=1)
     test_pred=np.empty((test.shape[0],1),float)
@@ -351,6 +420,22 @@ def Stacking(model,train,y,test,n_fold):
       train_pred=np.append(train_pred,model.predict(x_val))
       test_pred=np.append(test_pred,model.predict(test))
     return test_pred.reshape(-1,1),train_pred
+"""
+
+def Stacking(model,train,y,test,n_fold):
+    folds=StratifiedKFold(n_splits=n_fold,random_state=1)
+    test_pred=np.empty((test.shape[0],1),float)
+    train_pred=np.empty((0,1),float)
+  
+    for train_indices,val_indices in folds.split(train,y.values):
+      x_train,x_val=train.iloc[train_indices],train.iloc[val_indices]
+      y_train,y_val=y.iloc[train_indices],y.iloc[val_indices]
+
+      model.fit(X=x_train,y=y_train)
+      train_pred=np.append(train_pred,model.predict_proba(x_val))
+      test_pred=np.append(test_pred,model.predict_proba(test))
+    return test_pred.reshape(-1,1),train_pred
+
 
 
 model1 = abc
@@ -384,5 +469,26 @@ model = LogisticRegression(random_state=1)
 model.fit(df,y_train)
 model.score(df_test, y_test)
 
+#re-set main df's
+X_train = train[features]
+y_train = train["Category"]
+X_test = test[features]
 
-model_proba = model.predict_proba(X_test)
+
+model.predict_proba(X_test)
+
+
+df_proba = pd.concat([pd.DataFrame(predictions_nb_proba), 
+                      pd.DataFrame(predictions_abc_proba), pd.DataFrame(predictions_rf_proba)], axis = 1)
+    
+df_proba_train = pd.concat([pd.DataFrame(predictions_nb_proba_train), 
+                      pd.DataFrame(predictions_abc_proba_train), pd.DataFrame(predictions_rf_proba_train)], axis = 1)
+    
+model.fit(df_proba, y_train)
+#model.fit(X_train, y_train)
+model_proba = model.predict_proba(df_proba)
+
+"""
+#https://wiki.openstreetmap.org/wiki/Downloading_data
+
+#https://towardsdatascience.com/a-guide-to-ensemble-learning-d3686c9bed9a
