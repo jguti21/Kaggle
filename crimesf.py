@@ -14,9 +14,9 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 
-os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/CrimeSF')
+#os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/CrimeSF')
 
-#os.chdir('C:/Users/Jordi/Desktop/Economics/Kaggle/CrimeSF')
+os.chdir('C:/Users/jordi/Desktop/Work/Kaggle/CrimeSF')
 
 train = pd.read_csv("train.csv", parse_dates=['Dates'])
 
@@ -64,7 +64,7 @@ train['Date']=pd.to_datetime(train['Dates'].dt.strftime('%Y-%m-%d'),format='%Y-%
 test['Date']=pd.to_datetime(test['Dates'].dt.strftime('%Y-%m-%d'),format='%Y-%m-%d')
 
 # Preprocessing weather data
-weather_data = pd.read_csv("weather.csv")
+weather_data = pd.read_csv("weather.csv", sep=';')
 
 weather_data.columns = ['t_max','t_avg','t_min','dew_max','dew_avg','dew_min','hum_max',
                         'hum_avg','hum_min','wind_max','wind_avg','wind_min','pres_max','pres_avg','pres_min','percip','Date']
@@ -358,6 +358,8 @@ S_train, S_test = stacking(models, X_train, y_train, X_test, regression=False, m
 
 model = XGBClassifier()
     
+model = LogisticRegression(max_iter=100)
+
 model = model.fit(S_train, y_train)
 y_pred = model.predict_proba(S_test)
 
