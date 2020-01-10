@@ -22,7 +22,6 @@ from nltk.stem import PorterStemmer
 
 
 
-from sklearn.ensemble import RandomForestClassifier
 
 
 os.chdir('C:/Users/jordi/Desktop/Work/Kaggle/Word2Vec')
@@ -202,23 +201,54 @@ for tag, count in zip(vocab, dist):
     
 print("Training the random forest...")
 
-# Initialize a Random Forest classifier with 100 trees
-forest = RandomForestClassifier(n_estimators = 100) 
+
+############################################
+
+# Modeling
+###########################################
+
+from sklearn.ensemble import VotingClassifier
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+
+
+
+
+# Initialize models
+rf = RandomForestClassifier(n_estimators = 100) 
 
 # Fit the forest to the training set, using the bag of words as 
 # features and the sentiment labels as the response variable
 #
 # This may take a few minutes to run
-forest = forest.fit( train_data_features, train["sentiment"] )
+rf = rf.fit( train_data_features, train["sentiment"] )
 
+
+
+
+#Models
+
+#Voting
+
+
+eclf1 = VotingClassifier(estimators=[('rf', rf), ('lgr', lgr), 
+                                     ('gnb', gnb)], voting='hard')
+
+eclf1 = eclf1.fit(X_train, y_train)
+
+
+pred_vote = eclf1.predict(X_test)
 
 
 # Read the test data
 test = pd.read_csv("testData.tsv", header=0, delimiter="\t", \
                    quoting=3 )
 
-# Verify that there are 25,000 rows and 2 columns
-print (test.shape)
 
 # Create an empty list and append the clean reviews one by one
 num_reviews = len(test["review"])
