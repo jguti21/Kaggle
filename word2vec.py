@@ -13,7 +13,6 @@ import pandas as pd
 import numpy as np
 from bs4 import BeautifulSoup             
 import re
-import nltk
 from nltk.corpus import stopwords # Import the stop word list
 from sklearn.feature_extraction.text import CountVectorizer
 
@@ -123,7 +122,7 @@ def review_to_words( raw_review ):
 
 clean_review = review_to_words( train["review"][0] )
 
-
+print(clean_review)
 
 def stemSentence(sentence):
     token_words=word_tokenize(sentence)
@@ -220,13 +219,23 @@ from sklearn.ensemble import GradientBoostingClassifier
 
 
 # Initialize models
+
+lgr = LogisticRegression()
+
+knn = KNeighborsClassifier()
+
 rf = RandomForestClassifier(n_estimators = 100) 
+
+abc = AdaBoostClassifier()
+
+gbc = GradientBoostingClassifier()
+
 
 # Fit the forest to the training set, using the bag of words as 
 # features and the sentiment labels as the response variable
 #
 # This may take a few minutes to run
-rf = rf.fit( train_data_features, train["sentiment"] )
+#rf = rf.fit( train_data_features, train["sentiment"] )
 
 
 
@@ -236,13 +245,14 @@ rf = rf.fit( train_data_features, train["sentiment"] )
 #Voting
 
 
-eclf1 = VotingClassifier(estimators=[('rf', rf), ('lgr', lgr), 
-                                     ('gnb', gnb)], voting='hard')
+vc = VotingClassifier(estimators=[('knn', knn), ('lgr', lgr), ('rf', rf), ('abc', abc),
+                                     ('gbc', gbc)], voting='soft', n_jobs = -2)
 
-eclf1 = eclf1.fit(X_train, y_train)
+#n_jobs = -1 uses all CPU's, -2 uses all CPUs -1
 
+     
+vc = vc.fit(train_data_features, train["sentiment"] )
 
-pred_vote = eclf1.predict(X_test)
 
 
 # Read the test data
@@ -266,14 +276,16 @@ test_data_features = vectorizer.transform(clean_test_reviews)
 test_data_features = test_data_features.toarray()
 
 # Use the random forest to make sentiment label predictions
-result = forest.predict(test_data_features)
+#result = forest.predict(test_data_features)
+
+
+result = vc.predict(test_data_features)
 
 # Copy the results to a pandas dataframe with an "id" column and
 # a "sentiment" column
 output = pd.DataFrame( data={"id":test["id"], "sentiment":result} )
 
 # Use pandas to write the comma-separated output file
-output.to_csv( "Bag_of_Words_model.csv", index=False, quoting=3 )    
-
+output.to_csv( "voting.csv", index=False, quoting=3 )    
 
 
