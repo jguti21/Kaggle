@@ -238,7 +238,27 @@ gbc = GradientBoostingClassifier()
 #rf = rf.fit( train_data_features, train["sentiment"] )
 
 
+# Grid Search CV
 
+from sklearn.model_selection import GridSearchCV
+
+# Create the parameter grid based on the results of random search 
+param_grid = {
+    'bootstrap': [True],
+    'max_depth': [80, 90, 100, 110],
+    'max_features': [2, 3],
+    'min_samples_leaf': [3, 4, 5],
+    'min_samples_split': [8, 10, 12],
+    'n_estimators': [100, 200, 300, 1000]
+}
+# Create a based model
+# Instantiate the grid search model
+grid_search = GridSearchCV(estimator = rf, param_grid = param_grid, 
+                          cv = 3, n_jobs = -1, verbose = 2)
+
+
+# Fit the grid search to the data
+grid_search.fit(train_data_features, train["sentiment"])
 
 #Models
 
