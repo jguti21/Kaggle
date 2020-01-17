@@ -18,10 +18,10 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.stem import PorterStemmer
+from nltk.stem import WordNetLemmatizer
 
-
-
-
+import num2words
+from emot.emo_unicode import UNICODE_EMO, EMOTICONS
 
 os.chdir('C:/Users/jordi/Desktop/Work/Kaggle/Word2Vec')
 
@@ -73,9 +73,15 @@ words = lower_case.split()               # Split into words
 
 
 porter=PorterStemmer()
+wordnet_lemmatizer = WordNetLemmatizer()
 
 #porter.stem(word)
 
+# Function for converting emoticons into word
+def convert_emoticons(text):
+    for emot in EMOTICONS:
+        text = re.sub(u'('+emot+')', "_".join(EMOTICONS[emot].replace(",","").split()), text)
+    return text
 
 
 # Remove stop words from "words"
@@ -90,6 +96,14 @@ def review_to_words( raw_review ):
     # 1. Remove HTML
     review_text = BeautifulSoup(raw_review).get_text() 
     #
+    #   1a. replace numbers with words
+    
+    #letters_only = re.sub(r"(\d+)", lambda x: num2words.num2words(int(x.group(0))), review_text) 
+    
+    #   1b. replace emoticons with words
+    
+    #    convert_emoticons(review_text)
+    
     # 2. Remove non-letters        
     letters_only = re.sub("[^a-zA-Z]", " ", review_text) 
     #
@@ -113,6 +127,9 @@ def review_to_words( raw_review ):
     
     meaningful_words = [porter.stem(w) for w in meaningful_words]
     
+    
+    #6b
+#    meaningful_words = [wordnet_lemmatizer.lemmatize(w, pos="v") for w in meaningful_words]
     # Insert 
     
     # 7. Join the words back into one string separated by space, 
@@ -224,49 +241,177 @@ lgr = LogisticRegression()
 
 knn = KNeighborsClassifier()
 
-rf = RandomForestClassifier(n_estimators = 100) 
+rf = RandomForestClassifier() 
 
 abc = AdaBoostClassifier()
 
 gbc = GradientBoostingClassifier()
 
 
-# Fit the forest to the training set, using the bag of words as 
-# features and the sentiment labels as the response variable
-#
-# This may take a few minutes to run
-#rf = rf.fit( train_data_features, train["sentiment"] )
 
+################################################## Model fitting
+
+# split in train and test
+
+# For each model:
+    # prepare a parameter grid
+    # Grid Search CV
+    # Obtain best parameters
+    # Input model with best parameters into voting
+
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import make_scorer
+
+# Split the dataset in two equal parts
+X_train, X_test, y_train, y_test = train_test_split(
+    train_data_features, train["sentiment"], test_size=0.3, random_state=0)
+
+#set up ROC as scorer
+roc_auc_scorer = make_scorer(roc_auc_score, greater_is_better=True,
+                             needs_threshold=True)
+
+############################## lgr
 
 # Grid Search CV
 
-from sklearn.model_selection import GridSearchCV
 
 # Create the parameter grid based on the results of random search 
-param_grid = {
-    'bootstrap': [True],
-    'max_depth': [80, 90, 100, 110],
-    'max_features': [2, 3],
-    'min_samples_leaf': [3, 4, 5],
-    'min_samples_split': [8, 10, 12],
-    'n_estimators': [100, 200, 300, 1000]
+param_grid_lgr = {
+    'max_iter': [100, 80, 120],
+    'solver': ['lbfgs', 'newton-cg', 'liblinear'],
+    'multi_class': ['auto', 'ovr', 'multinomial'],
 }
+
+
+
+
 # Create a based model
 # Instantiate the grid search model
-grid_search = GridSearchCV(estimator = rf, param_grid = param_grid, 
-                          cv = 3, n_jobs = -1, verbose = 2)
+grid_search_lgr = GridSearchCV(estimator = lgr, param_grid = param_grid_lgr, 
+                          cv = 5, n_jobs = -1, scoring='roc_auc')
+
+
+grid_search_lgr.fit(X_train, y_train)
+
+lgr = LogisticRegression(grid_search_lgr.best_params_) 
+
+
+
+############################## knn
+
+# Grid Search CV
+
+
+# Create the parameter grid based on the results of random search 
+param_grid_knn = {
+    'max_iter': [100, 80, 120],
+    'solver': ['lbfgs', 'newton-cg', 'liblinear'],
+    'multi_class': ['auto', 'ovr', 'multinomial'],
+}
+
+
+# Create a based model
+# Instantiate the grid search model
+grid_search_knn = GridSearchCV(estimator = knn, param_grid = param_grid_knn, 
+                          cv = 5, n_jobs = -1, scoring='roc_auc')
+
+
+grid_search_knn.fit(X_train, y_train)
+
+knn =  KNeighborsClassifier(grid_search_knn.best_params_) 
+
+
+
+
+############################## rf
+
+# Grid Search CV
+
+
+# Create the parameter grid based on the results of random search 
+param_grid_rf = {
+    'max_depth': [80, 90, 100],
+    'min_samples_split': [8, 10, 12],
+    'n_estimators': [100, 200, 1000]
+}
+
+
+# Create a based model
+# Instantiate the grid search model
+grid_search_rf = GridSearchCV(estimator = rf, param_grid = param_grid_rf, 
+                          cv = 5, n_jobs = -1, scoring='roc_auc')
+
+
+grid_search_rf.fit(X_train, y_train)
+
+rf = RandomForestClassifier(grid_search_rf.best_params_) 
+
+
+
+############################## abc
+
+# Grid Search CV
+
+
+# Create the parameter grid based on the results of random search 
+param_grid_abc = {
+    'algorithm': ['SAMME', 'SAMME.R'],
+    'learning_rate': [1, 1.2, 0.8],
+    'n_estimators': [50, 100, 500]
+}
+
+
+# Create a based model
+# Instantiate the grid search model
+grid_search_abc = GridSearchCV(estimator = abc, param_grid = param_grid_abc, 
+                          cv = 5, n_jobs = -1, scoring='roc_auc')
+
+
+grid_search_abc.fit(X_train, y_train)
+
+abc = AdaBoostClassifier(grid_search_abc.best_params_) 
+
+
+
+############################## gbc
+
+# Grid Search CV
+
+
+# Create the parameter grid based on the results of random search 
+param_grid_gbc = {
+    'subsample': [1, 0.8],
+    'learning_rate': [0.1, 0.08, 0.2],
+    'n_estimators': [100, 200, 500]
+}
+
+
+# Create a based model
+# Instantiate the grid search model
+grid_search_gbc = GridSearchCV(estimator = gbc, param_grid = param_grid_gbc, 
+                          cv = 5, n_jobs = -1, scoring='roc_auc')
+
+
+grid_search_abc.fit(X_train, y_train)
+
+gbc = GradientBoostingClassifier(grid_search_gbc.best_params_) 
 
 
 # Fit the grid search to the data
-grid_search.fit(train_data_features, train["sentiment"])
+#grid_search.fit(train_data_features, train["sentiment"])
 
 #Models
 
 #Voting
 
+weights=[grid_search_lgr.best_score_,grid_search_knn.best_score_,
+         grid_search_rf.best_score_, grid_search_gbc.best_score_, grid_search_abc.best_score_]
 
+# play with weights
 vc = VotingClassifier(estimators=[('knn', knn), ('lgr', lgr), ('rf', rf), ('abc', abc),
-                                     ('gbc', gbc)], voting='soft', n_jobs = -2)
+                                     ('gbc', gbc)], voting='soft', n_jobs = -1, weights = weights)
 
 #n_jobs = -1 uses all CPU's, -2 uses all CPUs -1
 
@@ -307,5 +452,4 @@ output = pd.DataFrame( data={"id":test["id"], "sentiment":result} )
 
 # Use pandas to write the comma-separated output file
 output.to_csv( "voting.csv", index=False, quoting=3 )    
-
 
