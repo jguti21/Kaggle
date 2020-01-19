@@ -25,7 +25,7 @@ Simple classification, text data
 - Scilearn function
 
 ### Data engineering
-
+Extra data: https://www.kaggle.com/utathya/imdb-review-dataset
 
 ### Models used
 XGBOOST (Gavril)
