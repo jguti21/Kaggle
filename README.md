@@ -5,16 +5,13 @@ Kaggle competitions
 Regression Prediction, Tabular data
 <br> Link: https://www.kaggle.com/c/house-prices-advanced-regression-techniques
 
-
 # Second Competition - SF Crimes (December 2019)
 Multi-classification problem, spatial data
 <br> Link: https://www.kaggle.com/c/sf-crime
 
-
-
-# Second Competition - Bag of words (January 2019)
-Simple classification, text data  
-<br> Link: https://www.kaggle.com/c/sf-crime
+# Second Competition - Bag of Words Meets Bags of Popcorn (January 2019)
+Simple classification, text data
+<br> Link: https://www.kaggle.com/c/word2vec-nlp-tutorial
 <br> Gavril: https://www.kaggle.com/gavrilpetrov/tutorial-1-bag-of-words
 
 ### Data cleaning
