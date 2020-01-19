@@ -185,6 +185,9 @@ vectorizer = CountVectorizer(analyzer = "word",   \
                              max_features = 5000) 
 
 
+#vectorizer = TfidfVectorizer()
+
+
 # fit_transform() does two functions: First, it fits the model
 # and learns the vocabulary; second, it transforms our training data
 # into feature vectors. The input to fit_transform should be a list of 
@@ -264,6 +267,8 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import make_scorer
 
+from joblib import dump, load
+
 # Split the dataset in two equal parts
 X_train, X_test, y_train, y_test = train_test_split(
     train_data_features, train["sentiment"], test_size=0.3, random_state=0)
@@ -281,7 +286,7 @@ roc_auc_scorer = make_scorer(roc_auc_score, greater_is_better=True,
 param_grid_lgr = {
     'max_iter': [100, 80, 120],
     'solver': ['lbfgs', 'newton-cg', 'liblinear'],
-    'multi_class': ['auto', 'ovr', 'multinomial'],
+    'multi_class': ['auto', 'ovr'],
 }
 
 
@@ -290,14 +295,22 @@ param_grid_lgr = {
 # Create a based model
 # Instantiate the grid search model
 grid_search_lgr = GridSearchCV(estimator = lgr, param_grid = param_grid_lgr, 
-                          cv = 5, n_jobs = -1, scoring='roc_auc')
+                          cv = 5, n_jobs = -2, scoring='roc_auc')
 
 
 grid_search_lgr.fit(X_train, y_train)
 
 lgr = LogisticRegression(grid_search_lgr.best_params_) 
 
+lgr = LogisticRegression(max_iter = 80) 
 
+grid_search_lgr.best_score_ = 0.9226668788029424
+
+dump(lgr, 'lgr.joblib')
+
+#dump(grid_search_lgr, 'grid_search_lrg.joblib' )
+#
+#lgr = load('lgr.joblib')
 
 ############################## knn
 
@@ -306,24 +319,27 @@ lgr = LogisticRegression(grid_search_lgr.best_params_)
 
 # Create the parameter grid based on the results of random search 
 param_grid_knn = {
-    'max_iter': [100, 80, 120],
-    'solver': ['lbfgs', 'newton-cg', 'liblinear'],
-    'multi_class': ['auto', 'ovr', 'multinomial'],
+    'n_neighbors': [5],
+    'algorithm': ['auto'],
+    'leaf_size': [30],
 }
 
 
 # Create a based model
 # Instantiate the grid search model
 grid_search_knn = GridSearchCV(estimator = knn, param_grid = param_grid_knn, 
-                          cv = 5, n_jobs = -1, scoring='roc_auc')
+                          cv = 5, n_jobs = -2, scoring='roc_auc')
 
 
 grid_search_knn.fit(X_train, y_train)
 
 knn =  KNeighborsClassifier(grid_search_knn.best_params_) 
 
+grid_search_knn.best_score_ = 0.663629683998995
 
+dump(knn, 'knn.joblib')
 
+dump(grid_search_knn, 'grid_search_knn.joblib' )
 
 ############################## rf
 
@@ -332,23 +348,32 @@ knn =  KNeighborsClassifier(grid_search_knn.best_params_)
 
 # Create the parameter grid based on the results of random search 
 param_grid_rf = {
-    'max_depth': [80, 90, 100],
-    'min_samples_split': [8, 10, 12],
-    'n_estimators': [100, 200, 1000]
+    'max_depth': [80, 90],
+    'min_samples_split': [8],
+    'n_estimators': [100, 200]
 }
 
 
 # Create a based model
 # Instantiate the grid search model
 grid_search_rf = GridSearchCV(estimator = rf, param_grid = param_grid_rf, 
-                          cv = 5, n_jobs = -1, scoring='roc_auc')
+                          cv = 5, n_jobs = -2, scoring='roc_auc')
 
 
 grid_search_rf.fit(X_train, y_train)
 
 rf = RandomForestClassifier(grid_search_rf.best_params_) 
 
+rf = RandomForestClassifier(max_depth = 90, min_samples_split = 8, n_estimators = 200) 
 
+grid_search_rf.best_score_ = 0.920650480793587
+
+dump(rf, 'rf.joblib')
+
+#grid_search_rf.best_score_ = 1
+
+
+#dump(grid_search_rf, 'grid_search_rf.joblib' )
 
 ############################## abc
 
@@ -358,15 +383,15 @@ rf = RandomForestClassifier(grid_search_rf.best_params_)
 # Create the parameter grid based on the results of random search 
 param_grid_abc = {
     'algorithm': ['SAMME', 'SAMME.R'],
-    'learning_rate': [1, 1.2, 0.8],
-    'n_estimators': [50, 100, 500]
+    'learning_rate': [1, 1.2],
+    'n_estimators': [50, 100]
 }
 
 
 # Create a based model
 # Instantiate the grid search model
 grid_search_abc = GridSearchCV(estimator = abc, param_grid = param_grid_abc, 
-                          cv = 5, n_jobs = -1, scoring='roc_auc')
+                          cv = 5, n_jobs = -2, scoring='roc_auc')
 
 
 grid_search_abc.fit(X_train, y_train)
@@ -374,6 +399,14 @@ grid_search_abc.fit(X_train, y_train)
 abc = AdaBoostClassifier(grid_search_abc.best_params_) 
 
 
+abc = AdaBoostClassifier() 
+
+dump(abc, 'abc.joblib')
+
+grid_search_abc.best_score_ = 0.9023515074908777
+
+
+#dump(grid_search_abc, 'grid_search_abc.joblib' )
 
 ############################## gbc
 
@@ -382,21 +415,33 @@ abc = AdaBoostClassifier(grid_search_abc.best_params_)
 
 # Create the parameter grid based on the results of random search 
 param_grid_gbc = {
-    'subsample': [1, 0.8],
-    'learning_rate': [0.1, 0.08, 0.2],
-    'n_estimators': [100, 200, 500]
+    'subsample': [1],
+    'learning_rate': [0.1],
+    'n_estimators': [100, 120]
 }
 
 
 # Create a based model
 # Instantiate the grid search model
 grid_search_gbc = GridSearchCV(estimator = gbc, param_grid = param_grid_gbc, 
-                          cv = 5, n_jobs = -1, scoring='roc_auc')
+                          cv = 5, n_jobs = -2, scoring='roc_auc')
 
 
-grid_search_abc.fit(X_train, y_train)
+grid_search_gbc.fit(X_train, y_train)
 
 gbc = GradientBoostingClassifier(grid_search_gbc.best_params_) 
+
+
+gbc = GradientBoostingClassifier(learning_rate = 0.1, n_estimators = 120, subsample = 1) 
+
+dump(gbc, 'gbc.joblib')
+
+grid_search_gbc.best_score_ = 0.8987871540149742
+
+#dump(grid_search_gbc, 'grid_search_gbc.joblib' )
+
+
+
 
 
 # Fit the grid search to the data
@@ -406,12 +451,12 @@ gbc = GradientBoostingClassifier(grid_search_gbc.best_params_)
 
 #Voting
 
-weights=[grid_search_lgr.best_score_,grid_search_knn.best_score_,
+weights=[grid_search_lgr.best_score_,
          grid_search_rf.best_score_, grid_search_gbc.best_score_, grid_search_abc.best_score_]
 
 # play with weights
-vc = VotingClassifier(estimators=[('knn', knn), ('lgr', lgr), ('rf', rf), ('abc', abc),
-                                     ('gbc', gbc)], voting='soft', n_jobs = -1, weights = weights)
+vc = VotingClassifier(estimators=[('lgr', lgr), ('rf', rf), ('abc', abc),
+                                     ('gbc', gbc)], voting='soft', n_jobs = -2, weights = weights)
 
 #n_jobs = -1 uses all CPU's, -2 uses all CPUs -1
 
@@ -452,4 +497,3 @@ output = pd.DataFrame( data={"id":test["id"], "sentiment":result} )
 
 # Use pandas to write the comma-separated output file
 output.to_csv( "voting.csv", index=False, quoting=3 )    
-
