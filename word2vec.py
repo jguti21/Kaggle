@@ -23,6 +23,9 @@ from nltk.stem import WordNetLemmatizer
 import num2words
 from emot.emo_unicode import UNICODE_EMO, EMOTICONS
 
+import zipfile 
+
+
 os.chdir('C:/Users/jordi/Desktop/Work/Kaggle/Word2Vec')
 
 os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/Word2Vec')
@@ -55,7 +58,13 @@ train = pd.read_csv("labeledTrainData.tsv", header=0, \
                     delimiter="\t", quoting=3)
 
 
-df2 = pd.read_csv('imdb_master.csv',encoding="latin-1")
+archive = zipfile.ZipFile('imdb-review-dataset.zip', 'r')
+
+df = archive.open('imdb_master.csv')
+
+df2 = pd.read_csv(df, encoding="latin-1")
+
+#df2 = pd.read_csv('imdb_master.csv',encoding="latin-1")
 
 df2 = df2.drop(['Unnamed: 0','type','file'],axis=1)
 df2.columns = ["review","sentiment"]
@@ -467,17 +476,17 @@ gbc = GradientBoostingClassifier(learning_rate = 0.1, n_estimators = 120, subsam
 #Voting
 
 
-grid_search_lgr.best_score_ = 0.9226668788029424
+grid_search_lgr_best_score_ = 0.9226668788029424
 
-grid_search_rf.best_score_ = 0.920650480793587
+grid_search_rf_best_score_ = 0.920650480793587
 
-grid_search_abc.best_score_ = 0.9023515074908777
+grid_search_abc_best_score_ = 0.9023515074908777
 
-grid_search_gbc.best_score_ = 0.8987871540149742
+grid_search_gbc_best_score_ = 0.8987871540149742
 
 
-weights=[grid_search_lgr.best_score_,
-         grid_search_rf.best_score_, grid_search_gbc.best_score_, grid_search_abc.best_score_]
+weights=[grid_search_lgr_best_score_,
+         grid_search_rf_best_score_, grid_search_gbc_best_score_, grid_search_abc_best_score_]
 
 # Voting model
 vc = VotingClassifier(estimators=[('lgr', lgr), ('rf', rf), ('abc', abc),
