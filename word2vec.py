@@ -55,6 +55,18 @@ train = pd.read_csv("labeledTrainData.tsv", header=0, \
                     delimiter="\t", quoting=3)
 
 
+df2 = pd.read_csv('imdb_master.csv',encoding="latin-1")
+
+df2 = df2.drop(['Unnamed: 0','type','file'],axis=1)
+df2.columns = ["review","sentiment"]
+
+#remove half of it, unsupervised learning
+df2 = df2[df2.sentiment != 'unsup']
+df2['sentiment'] = df2['sentiment'].map({'pos': 1, 'neg': 0})
+
+
+# MERGE
+train= pd.concat([train, df2]).reset_index(drop=True)
 
 
 # Initialize the BeautifulSoup object on a single movie review     
