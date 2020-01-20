@@ -300,11 +300,10 @@ grid_search_lgr = GridSearchCV(estimator = lgr, param_grid = param_grid_lgr,
 
 grid_search_lgr.fit(X_train, y_train)
 
-lgr = LogisticRegression(grid_search_lgr.best_params_) 
+#lgr = LogisticRegression(grid_search_lgr.best_params_) 
 
-lgr = LogisticRegression(max_iter = 80) 
 
-grid_search_lgr.best_score_ = 0.9226668788029424
+
 
 dump(lgr, 'lgr.joblib')
 
@@ -312,6 +311,7 @@ dump(lgr, 'lgr.joblib')
 #
 #lgr = load('lgr.joblib')
 
+"""
 ############################## knn
 
 # Grid Search CV
@@ -340,6 +340,7 @@ grid_search_knn.best_score_ = 0.663629683998995
 dump(knn, 'knn.joblib')
 
 dump(grid_search_knn, 'grid_search_knn.joblib' )
+"""
 
 ############################## rf
 
@@ -362,11 +363,9 @@ grid_search_rf = GridSearchCV(estimator = rf, param_grid = param_grid_rf,
 
 grid_search_rf.fit(X_train, y_train)
 
-rf = RandomForestClassifier(grid_search_rf.best_params_) 
+#rf = RandomForestClassifier(grid_search_rf.best_params_) 
 
-rf = RandomForestClassifier(max_depth = 90, min_samples_split = 8, n_estimators = 200) 
 
-grid_search_rf.best_score_ = 0.920650480793587
 
 dump(rf, 'rf.joblib')
 
@@ -396,14 +395,12 @@ grid_search_abc = GridSearchCV(estimator = abc, param_grid = param_grid_abc,
 
 grid_search_abc.fit(X_train, y_train)
 
-abc = AdaBoostClassifier(grid_search_abc.best_params_) 
+#abc = AdaBoostClassifier(grid_search_abc.best_params_) 
 
 
-abc = AdaBoostClassifier() 
 
 dump(abc, 'abc.joblib')
 
-grid_search_abc.best_score_ = 0.9023515074908777
 
 
 #dump(grid_search_abc, 'grid_search_abc.joblib' )
@@ -429,17 +426,14 @@ grid_search_gbc = GridSearchCV(estimator = gbc, param_grid = param_grid_gbc,
 
 grid_search_gbc.fit(X_train, y_train)
 
-gbc = GradientBoostingClassifier(grid_search_gbc.best_params_) 
+#gbc = GradientBoostingClassifier(grid_search_gbc.best_params_) 
 
 
-gbc = GradientBoostingClassifier(learning_rate = 0.1, n_estimators = 120, subsample = 1) 
 
 dump(gbc, 'gbc.joblib')
 
-grid_search_gbc.best_score_ = 0.8987871540149742
 
 #dump(grid_search_gbc, 'grid_search_gbc.joblib' )
-
 
 
 
@@ -449,12 +443,31 @@ grid_search_gbc.best_score_ = 0.8987871540149742
 
 #Models
 
+lgr = LogisticRegression(max_iter = 80) 
+
+rf = RandomForestClassifier(max_depth = 90, min_samples_split = 8, n_estimators = 200) 
+
+abc = AdaBoostClassifier() 
+
+gbc = GradientBoostingClassifier(learning_rate = 0.1, n_estimators = 120, subsample = 1) 
+
+
 #Voting
+
+
+grid_search_lgr.best_score_ = 0.9226668788029424
+
+grid_search_rf.best_score_ = 0.920650480793587
+
+grid_search_abc.best_score_ = 0.9023515074908777
+
+grid_search_gbc.best_score_ = 0.8987871540149742
+
 
 weights=[grid_search_lgr.best_score_,
          grid_search_rf.best_score_, grid_search_gbc.best_score_, grid_search_abc.best_score_]
 
-# play with weights
+# Voting model
 vc = VotingClassifier(estimators=[('lgr', lgr), ('rf', rf), ('abc', abc),
                                      ('gbc', gbc)], voting='soft', n_jobs = -2, weights = weights)
 
