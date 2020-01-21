@@ -9,7 +9,7 @@ Regression Prediction, Tabular data
 Multi-classification problem, spatial data
 <br> Link: https://www.kaggle.com/c/sf-crime
 
-# Second Competition - Bag of Words Meets Bags of Popcorn (January 2019)
+# Third Competition - Bag of Words Meets Bags of Popcorn (January 2019)
 Simple classification, text data
 <br> Link: https://www.kaggle.com/c/word2vec-nlp-tutorial
 <br> Gavril: https://www.kaggle.com/gavrilpetrov/tutorial-1-bag-of-words
