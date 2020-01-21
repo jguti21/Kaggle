@@ -29,6 +29,6 @@ Extra data: https://www.kaggle.com/utathya/imdb-review-dataset
 
 ### Models used
 XGBOOST (Gavril)
-LightGBM (Gavril)
-RandomForest (Gavril)
+<br>LightGBM (Gavril)
+<br>RandomForest (Gavril)
 
