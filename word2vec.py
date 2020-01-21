@@ -16,6 +16,8 @@ import re
 from nltk.corpus import stopwords # Import the stop word list
 from sklearn.feature_extraction.text import CountVectorizer
 
+from sklearn.feature_extraction.text import TfidfVectorizer
+
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.stem import PorterStemmer
 from nltk.stem import WordNetLemmatizer
@@ -26,8 +28,10 @@ from emot.emo_unicode import UNICODE_EMO, EMOTICONS
 import zipfile 
 
 
-os.chdir('C:/Users/jordi/Desktop/Work/Kaggle/Word2Vec')
+#home
+#os.chdir('C:/Users/jordi/Desktop/Work/Kaggle/Word2Vec')
 
+#work
 os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/Word2Vec')
 
 
@@ -39,6 +43,15 @@ os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/Word2Vec')
 #    TF-IDF
 #   Master's project stuff
 
+#data augmentation: upsampling
+
+#Word2Vec
+
+#Github stuff
+
+
+#We increased the variance in the vocabulary by resampling with a random sample of synonyms from Stanford WordNet3.
+#http://ai.stanford.edu/~rion/swn/
 
 
 #Tokenize and stemming
@@ -57,14 +70,16 @@ os.chdir('C:/Users/gutierj/Desktop/Programming/Kaggle/Word2Vec')
 train = pd.read_csv("labeledTrainData.tsv", header=0, \
                     delimiter="\t", quoting=3)
 
+#home
+#archive = zipfile.ZipFile('imdb-review-dataset.zip', 'r')
 
-archive = zipfile.ZipFile('imdb-review-dataset.zip', 'r')
+#df = archive.open('imdb_master.csv')
 
-df = archive.open('imdb_master.csv')
+#df2 = pd.read_csv(df, encoding="latin-1")
 
-df2 = pd.read_csv(df, encoding="latin-1")
 
-#df2 = pd.read_csv('imdb_master.csv',encoding="latin-1")
+#work
+df2 = pd.read_csv('imdb_master.csv',encoding="latin-1")
 
 df2 = df2.drop(['Unnamed: 0','type','file'],axis=1)
 df2.columns = ["review","sentiment"]
@@ -94,7 +109,7 @@ words = lower_case.split()               # Split into words
 
 
 porter=PorterStemmer()
-wordnet_lemmatizer = WordNetLemmatizer()
+#wordnet_lemmatizer = WordNetLemmatizer()
 
 #porter.stem(word)
 
@@ -106,7 +121,9 @@ def convert_emoticons(text):
 
 
 # Remove stop words from "words"
-words = [w for w in words if not w in stopwords.words("english")]
+#words = [w for w in words if not w in stopwords.words("english")]
+
+#try to convert exclamation marks, question marks to words
 
 
 def review_to_words( raw_review ):
@@ -119,11 +136,11 @@ def review_to_words( raw_review ):
     #
     #   1a. replace numbers with words
     
-    #letters_only = re.sub(r"(\d+)", lambda x: num2words.num2words(int(x.group(0))), review_text) 
+    letters_only = re.sub(r"(\d+)", lambda x: num2words.num2words(int(x.group(0))), review_text) 
     
     #   1b. replace emoticons with words
     
-    #    convert_emoticons(review_text)
+    letters_only  =   convert_emoticons(letters_only)
     
     # 2. Remove non-letters        
     letters_only = re.sub("[^a-zA-Z]", " ", review_text) 
@@ -137,25 +154,29 @@ def review_to_words( raw_review ):
     
     # 4. In Python, searching a set is much faster than searching
     #   a list, so convert the stop words to a set
-    stops = set(stopwords.words("english"))                  
+#    stops = set(stopwords.words("english"))                  
     
     
     # 5. Remove stop words
-    meaningful_words = [w for w in words if not w in stops]   
+#    meaningful_words = [w for w in words if not w in stops]   
 
     
     # 6. Stem
     
-    meaningful_words = [porter.stem(w) for w in meaningful_words]
+    meaningful_words = [porter.stem(w) for w in words]
     
     
     #6b
-#    meaningful_words = [wordnet_lemmatizer.lemmatize(w, pos="v") for w in meaningful_words]
+#    meaningful_words = [wordnet_lemmatizer.lemmatize(w, pos="v") for w in words]
     # Insert 
     
     # 7. Join the words back into one string separated by space, 
     # and return the result.
     return( " ".join( meaningful_words ))  
+    
+    
+#review_to_words without stopwords, used in the vectorizer
+
     
 
 clean_review = review_to_words( train["review"][0] )
@@ -177,15 +198,6 @@ def stemSentence(sentence):
 num_reviews = train["review"].size
 
 
-"""
-# Loop over each review; create an index i that goes from 0 to the length
-# of the movie review list 
-for i in range( 0, num_reviews ):
-    # Call our function for each one, and add the result to the list of
-    # clean reviews
-    clean_train_reviews.append( review_to_words( train["review"][i] ) )
-"""    
-    
 print("Cleaning and parsing the training set movie reviews...\n")
 clean_train_reviews = []
 for i in range( 0, num_reviews ):
@@ -197,22 +209,49 @@ for i in range( 0, num_reviews ):
 
 print ("Creating the bag of words...\n")
 
-# Initialize the "CountVectorizer" object, which is scikit-learn's
-# bag of words tool.  
+
+"""
+# define lemmatizer for countvectorizer
+#class LemmaTokenizer:
+#     def __init__(self):
+#         self.wnl = WordNetLemmatizer()
+#     def __call__(self, doc):
+#         return [self.wnl.lemmatize(t) for t in word_tokenize(doc)]
+#
+
+#fails as it asks for nltk download
+
+
+#define preprocessor for countvectorizer
+         #should convert to only letters/words
+         
+"""
+
+
 vectorizer = CountVectorizer(analyzer = "word",   \
                              tokenizer = None,    \
                              preprocessor = None, \
-                             stop_words = None,   \
+                             stop_words = 'english',   \
                              max_features = 5000) 
 
 
-#vectorizer = TfidfVectorizer()
 
+"""
+
+
+
+vectorizer = TfidfVectorizer(analyzer = "word",   \
+                             tokenizer = None,    \
+                             preprocessor = None, \
+                             stop_words = 'english',   \
+                             max_features = 5000)
+"""
 
 # fit_transform() does two functions: First, it fits the model
 # and learns the vocabulary; second, it transforms our training data
 # into feature vectors. The input to fit_transform should be a list of 
 # strings.
+
 train_data_features = vectorizer.fit_transform(clean_train_reviews)
 
 
@@ -224,10 +263,10 @@ train_data_features = train_data_features.toarray()
 
 
 
+
 # Take a look at the words in the vocabulary
 vocab = vectorizer.get_feature_names()
 print(vocab)
-
 
 
 # Sum up the counts of each vocabulary word
@@ -239,7 +278,81 @@ for tag, count in zip(vocab, dist):
     print(count, tag)
     
     
-print("Training the random forest...")
+
+
+
+
+
+"""
+######## WordCloud
+from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
+import matplotlib.pyplot as plt
+
+wordcloud_list = (" ").join(clean_train_reviews)
+wordcloud = WordCloud(max_font_size=50, max_words=100, background_color="white").generate(wordcloud_list)
+
+# Display the generated image:
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis("off")
+plt.show()
+
+
+# Save the image in the img folder:
+#wordcloud.to_file("img/first_review.png")
+
+"""
+
+
+
+
+
+"""
+######### LDA
+import warnings
+warnings.simplefilter("ignore", DeprecationWarning)
+
+# Load the LDA model from sk-learn
+from sklearn.decomposition import LatentDirichletAllocation as LDA
+ 
+# Helper function
+def print_topics(model, count_vectorizer, n_top_words):
+    words = count_vectorizer.get_feature_names()
+    for topic_idx, topic in enumerate(model.components_):
+        print("\nTopic #%d:" % topic_idx)
+        print(" ".join([words[i]
+                        for i in topic.argsort()[:-n_top_words - 1:-1]]))
+        
+# Tweak the two parameters below
+number_topics = 5
+number_words = 10
+
+# Create and fit the LDA model
+lda = LDA(n_components=number_topics, n_jobs=-2)
+lda.fit(train_data_features)
+
+
+# Print the topics found by the LDA model
+print("Topics found via LDA:")
+print_topics(lda, vectorizer, number_words)
+
+Topics found via LDA:
+
+Topic #0:
+film thi hi stori charact ha veri love life time
+
+Topic #1:
+hi film thi ha man kill wa make like scene
+
+Topic #2:
+thi movi film wa like just watch bad make good
+
+Topic #3:
+wa hi thi film play great perform role time ha
+
+Topic #4:
+movi thi wa like just good watch realli time think
+
+"""
 
 
 ############################################
@@ -250,15 +363,17 @@ print("Training the random forest...")
 from sklearn.ensemble import VotingClassifier
 
 from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
+#from sklearn.neighbors import KNeighborsClassifier
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 
+print("Training the model...")
 
 
-
+#Cross-validation section
+"""
 # Initialize models
 
 lgr = LogisticRegression()
@@ -332,7 +447,7 @@ dump(lgr, 'lgr.joblib')
 #
 #lgr = load('lgr.joblib')
 
-"""
+
 ############################## knn
 
 # Grid Search CV
@@ -361,7 +476,7 @@ grid_search_knn.best_score_ = 0.663629683998995
 dump(knn, 'knn.joblib')
 
 dump(grid_search_knn, 'grid_search_knn.joblib' )
-"""
+
 
 ############################## rf
 
@@ -458,6 +573,8 @@ dump(gbc, 'gbc.joblib')
 
 
 
+"""
+
 
 # Fit the grid search to the data
 #grid_search.fit(train_data_features, train["sentiment"])
@@ -517,12 +634,16 @@ for i in range(0,num_reviews):
 
 # Get a bag of words for the test set, and convert to a numpy array
 test_data_features = vectorizer.transform(clean_test_reviews)
+
+#ecb
+#test_data_features = vectorizer.transform(test["review"])
+
 test_data_features = test_data_features.toarray()
 
 # Use the random forest to make sentiment label predictions
 #result = forest.predict(test_data_features)
 
-
+print("Predicting...")
 result = vc.predict(test_data_features)
 
 # Copy the results to a pandas dataframe with an "id" column and
