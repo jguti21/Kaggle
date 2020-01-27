@@ -4,6 +4,20 @@ os.chdir("C:/Users/daphn/Documents/Kaggle/word2vec-nlp-tutorial")
 import pandas as pd
 train = pd.read_csv("data/labeledTrainData.tsv", header=0,
                     delimiter="\t", quoting=3)
+# Add the extra data
+extra = pd.read_csv('data/extradata.csv',
+                    encoding="latin-1")
+
+extra = extra.drop(['Unnamed: 0', 'type', 'file'],
+                   axis=1)
+extra.columns = ["review", "sentiment"]
+
+#remove half of it, unsupervised learning
+extra = extra[extra.sentiment != 'unsup']
+extra['sentiment'] = extra['sentiment'].map({'pos': 1,
+                                             'neg': 0})
+# MERGE
+train = pd.concat([train, extra]).reset_index(drop=True)
 
 # Inspection of the training set
 # for sentiment:
@@ -19,7 +33,7 @@ train["characters"] = train["review"].str.len()
 # Longest review has 13 710 characters
 max(train["characters"])
 
-# Shortest review has 54 characters
+# Shortest review has 32 characters
 min(train["characters"])
 
 # The shortest review is:
@@ -45,6 +59,30 @@ import num2words
 from emot.emo_unicode import UNICODE_EMO, EMOTICONS
 
 ####### CLEANING ########
+# Remove the emojis
+def remove_emoji(string):
+    emoji_pattern = re.compile("["
+                           u"\U0001F600-\U0001F64F"  # emoticons
+                           u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                           u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                           u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                           u"\U00002702-\U000027B0"
+                           u"\U000024C2-\U0001F251"
+                           "]+", flags=re.UNICODE)
+    return emoji_pattern.sub(r'', string)
+
+train["review"] = train["review"] \
+    .apply(lambda review: remove_emoji(review))
+
+# Exchange emoticons for their meaning
+def convert_emoticons(text):
+    for emot in EMOTICONS:
+        text = re.sub(u'('+emot+')', "_".join(EMOTICONS[emot].replace(",","").split()), text)
+    return text
+
+train["review"] = train["review"] \
+    .apply(lambda review: convert_emoticons(review))
+
 # To lower case
 train["review_cleaned"] = train["review"].str.lower()
 
@@ -94,7 +132,8 @@ train["review_cleaned"] = train["review_cleaned"].apply(
 )
 
 # Removal of rare words
-n_rare_words = 50000
+# probably 50 000 is a bit too much
+n_rare_words = 230000
 RAREWORDS = set([w for (w, wc) in cnt.most_common()[:-n_rare_words-1:-1]])
 
 def remove_rarewords(review):
@@ -145,30 +184,9 @@ def lemmatize_words(text):
 train["review_cleaned"] = train["review_cleaned"] \
     .apply(lambda review: lemmatize_words(review))
 
-
-# Remove the emojis
-def remove_emoji(string):
-    emoji_pattern = re.compile("["
-                           u"\U0001F600-\U0001F64F"  # emoticons
-                           u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-                           u"\U0001F680-\U0001F6FF"  # transport & map symbols
-                           u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-                           u"\U00002702-\U000027B0"
-                           u"\U000024C2-\U0001F251"
-                           "]+", flags=re.UNICODE)
-    return emoji_pattern.sub(r'', string)
-
-train["review_cleaned"] = train["review_cleaned"] \
-    .apply(lambda review: remove_emoji(review))
-
-# Exchange emoticons for their meaning
-def convert_emoticons(text):
-    for emot in EMOTICONS:
-        text = re.sub(u'('+emot+')', "_".join(EMOTICONS[emot].replace(",","").split()), text)
-    return text
-
-train["review_cleaned"] = train["review_cleaned"] \
-    .apply(lambda review: convert_emoticons(review))
+from nltk import word_tokenize
+tokens = [word_tokenize(sen) for sen in train.review_cleaned]
+train['tokens'] = tokens
 
 # Replace numbers
 # import num2words
@@ -178,7 +196,7 @@ train["review_cleaned"] = train["review_cleaned"] \
 docs = train["review_cleaned"].to_list()
 
 # CNN tutorial
-train["review_final"] = train["review_cleaned"].str.split()
+#train["review_final"] = train["review_cleaned"].str.split()
 
 train['Pos'] = np.where(train["sentiment"] == 1, 1, 0)
 train['Neg'] = np.where(train["sentiment"] == 0, 1, 0)
@@ -188,19 +206,19 @@ data_train, data_test = train_test_split(train,
                                          test_size=0.10,
                                          random_state=42)
 
-all_training_words = [word for tokens in data_train["review_final"]
+all_training_words = [word for tokens in data_train["tokens"]
                       for word in tokens]
 training_sentence_lengths = [len(tokens) for tokens
-                             in data_train["review_final"]]
+                             in data_train["tokens"]]
 
 TRAINING_VOCAB = sorted(list(set(all_training_words)))
 print("%s words total, with a vocabulary size of %s" % (len(all_training_words), len(TRAINING_VOCAB)))
 print("Max sentence length is %s" % max(training_sentence_lengths))
 
-all_test_words = [word for tokens in data_test["review_final"]
+all_test_words = [word for tokens in data_test["tokens"]
                   for word in tokens]
 test_sentence_lengths = [len(tokens) for tokens
-                         in data_test["review_final"]]
+                         in data_test["tokens"]]
 TEST_VOCAB = sorted(list(set(all_test_words)))
 print("%s words total, with a vocabulary size of %s" % (len(all_test_words), len(TEST_VOCAB)))
 print("Max sentence length is %s" % max(test_sentence_lengths))
@@ -209,6 +227,7 @@ print("Max sentence length is %s" % max(test_sentence_lengths))
 from gensim import models
 # https://github.com/mmihaltz/word2vec-GoogleNews-vectors
 word2vec_path = './data/word2vec-GoogleNews-vectors/GoogleNews-vectors-negative300.bin.gz'
+# Some explanation: https://mccormickml.com/2016/04/12/googles-pretrained-word2vec-model-in-python/
 word2vec = models.KeyedVectors.load_word2vec_format(word2vec_path, binary=True)
 
 # Keras works with tensorflow
@@ -228,39 +247,18 @@ from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model
 
-def get_average_word2vec(tokens_list, vector, generate_missing=False, k=300):
-    if len(tokens_list)<1:
-        return np.zeros(k)
-    if generate_missing:
-        vectorized = [vector[word] if word in vector else np.random.rand(k) for word in tokens_list]
-    else:
-        vectorized = [vector[word] if word in vector else np.zeros(k) for word in tokens_list]
-    length = len(vectorized)
-    summed = np.sum(vectorized, axis=0)
-    averaged = np.divide(summed, length)
-    return averaged
 
-def get_word2vec_embeddings(vectors, clean_comments, generate_missing=False):
-    embeddings = clean_comments['review_final'].apply(lambda x:
-                                                get_average_word2vec(x,
-                                                                     vectors,
-                                                                     generate_missing=generate_missing))
-    return list(embeddings)
-
-# Get the embeddings
-training_embeddings = get_word2vec_embeddings(word2vec,
-                                              data_train,
-                                              generate_missing=True)
-MAX_SEQUENCE_LENGTH = 50
+MAX_SEQUENCE_LENGTH = 1289
 EMBEDDING_DIM = 300
 
 # Tokenize and Pad sequences
 tokenizer = Tokenizer(num_words=len(TRAINING_VOCAB),
                       lower=True, char_level=False)
-tokenizer.fit_on_texts(data_train["review_final"].tolist())
+
+tokenizer.fit_on_texts(data_train["review_cleaned"].tolist())
 
 training_sequences = tokenizer.texts_to_sequences(
-    data_train["review_final"].tolist())
+    data_train["review_cleaned"].tolist())
 
 train_word_index = tokenizer.word_index
 print('Found %s unique tokens.' % len(train_word_index))
@@ -276,11 +274,32 @@ for word,index in train_word_index.items():
 print(train_embedding_weights.shape)
 
 test_sequences = tokenizer.texts_to_sequences(
-    data_test["review_final"].tolist())
+    data_test["review_cleaned"].tolist())
 test_cnn_data = pad_sequences(test_sequences,
                               maxlen=MAX_SEQUENCE_LENGTH)
 
-# Define CNN
+# Convutional Neural Networks
+# https://www.youtube.com/watch?v=9aYuQmMJvjA
+# Historically for Image processing but it has been out-performing
+# the Recurrent Neural Network on sequence tasks.
+# High level explanation: accepts 2D and 3D input
+# Image => 2D array of pixels => then convulutions on this array
+# i.e try to locate features on window x by x (also called kernel)
+# finding shapes and curves and corners and etc.
+# once done slide the window
+# then condensing the image by keeping the results of the convultions
+# then pooling (complex algo) by taking the max value
+# Each layer will try to identify patterns in the convultions from
+# before.
+
+# The tuto is about imagery and gives the steps for preprocessing those
+
+# You have to be careful of the balance of the training data otherwise
+# the NN will optimize for the over-represented class and get stuck.
+
+# YOU NEED TO SHUFFLE THE DATA before training!
+
+
 def ConvNet(embeddings, max_sequence_length, num_words, embedding_dim, labels_index):
     embedding_layer = Embedding(num_words,
                                 embedding_dim,
@@ -295,7 +314,9 @@ def ConvNet(embeddings, max_sequence_length, num_words, embedding_dim, labels_in
     filter_sizes = [2, 3, 4, 5, 6]
 
     for filter_size in filter_sizes:
-        l_conv = Conv1D(filters=200, kernel_size=filter_size, activation='relu')(embedded_sequences)
+        l_conv = Conv1D(filters=200,
+                        kernel_size=filter_size,
+                        activation='relu')(embedded_sequences)
         l_pool = GlobalMaxPooling1D()(l_conv)
         convs.append(l_pool)
 
@@ -374,25 +395,59 @@ model = ConvNet(train_embedding_weights, MAX_SEQUENCE_LENGTH, len(train_word_ind
 num_epochs = 3
 batch_size = 34
 
-hist = model.fit(x_train, y_tr, epochs=num_epochs, validation_split=0.1, shuffle=True, batch_size=batch_size)
+hist = model.fit(x_train, y_tr, epochs=num_epochs, validation_split=0.1,
+                 shuffle=True, batch_size=batch_size)
+import matplotlib.pyplot as plt
+
+# plt.plot(hist.history['loss'])
+# plt.plot(hist.history['val_loss'])
+# plt.title('model train vs validation loss')
+# plt.ylabel('loss')
+# plt.xlabel('epoch')
+# plt.legend(['train', 'validation'], loc='upper right')
+# plt.show()
+
+
 
 # Test CNN
 predictions = model.predict(test_cnn_data, batch_size=1024, verbose=1)
-labels = [1, 0]
 
+labels = [1, 0]
 prediction_labels=[]
 for p in predictions:
     prediction_labels.append(labels[np.argmax(p)])
 
 sum(data_test.sentiment == prediction_labels)/len(prediction_labels)
+# By reducing the number of words in the vocabulary (removing the 150 000
+# rarest words), we actually gained: 0.01 in accuracy
 data_test.sentiment.value_counts()
 
+labels = ["Pos_cnn", "Neg_cnn"]
+df_predictions = pd.DataFrame(data=predictions, columns=labels)
+data_test.reset_index(drop=True, inplace=True)
+df_predictions.reset_index(drop=True, inplace=True)
+hh = pd.concat([data_test, df_predictions], axis=1)
+
+hh["threshold"] = np.where(
+    (hh["Pos_cnn"] < 0.6) & (hh["Pos_cnn"] > 0.4), True, False)
+
+# Some manual corrections could be added
+sum(hh["threshold"] == True)
+cut = hh[hh["threshold"] == True]
 #################################################################################
 # Trying to score
 test = pd.read_csv("data/testData.tsv", header=0,
                     delimiter="\t", quoting=3)
 
 test["review_cleaned"] = test["review"].str.lower()
+
+# Remove the emojis
+test["review_cleaned"] = test["review_cleaned"] \
+    .apply(lambda review: remove_emoji(review))
+
+# Exchange emoticons for their meaning
+test["review_cleaned"] = test["review_cleaned"] \
+    .apply(lambda review: convert_emoticons(review))
 
 # Remove HTML
 test["review_cleaned"] = test["review_cleaned"].apply(
@@ -423,27 +478,17 @@ test["review_cleaned"] = test["review_cleaned"] \
 test["review_cleaned"] = test["review_cleaned"] \
     .apply(lambda review: lemmatize_words(review))
 
-
-# Remove the emojis
-test["review_cleaned"] = test["review_cleaned"] \
-    .apply(lambda review: remove_emoji(review))
-
-# Exchange emoticons for their meaning
-test["review_cleaned"] = test["review_cleaned"] \
-    .apply(lambda review: convert_emoticons(review))
-
-test["review_final"] = test["review_cleaned"].str.split()
+#test["review_final"] = test["review_cleaned"].str.split()
 
 # Apply the model
 test_sequences = tokenizer.texts_to_sequences(
-    test["review_final"].tolist())
+    test["review_cleaned"].tolist())
 test_cnn_data = pad_sequences(test_sequences,
                               maxlen=MAX_SEQUENCE_LENGTH)
 
 predictions = model.predict(test_cnn_data, batch_size=1024, verbose=1)
 
 labels = ["Pos", "Neg"]
-
 prediction_labels=[]
 for p in predictions:
     prediction_labels.append(labels[np.argmax(p)])
@@ -453,11 +498,61 @@ df_predictions = pd.DataFrame(data=predictions, columns=labels)
 essai = pd.concat([test, df_predictions], axis=1)
 essai["threshold"] = np.where((essai["Pos"] < 0.6) & (essai["Pos"] > 0.4), True, False)
 
-# Some manual corrections could be added
-sum(essai["threshold"] == True)
+# Finding the review in test and train
+sub_train = train[["review", "sentiment"]]
+sub_train = sub_train.rename(columns={"sentiment": "true_sentiment"})
+mergedStuff = pd.merge(essai, sub_train,  on=['review'], how='left')
 
-essai["sentiment"] = np.where(essai["Pos"] > essai["Neg"], 1, 0)
+len(mergedStuff)
+sum(mergedStuff["true_sentiment"] == 1)
+sum(mergedStuff["true_sentiment"] == 0)
+
+mergedStuff["Pos"] = np.where(mergedStuff["true_sentiment"] == 1, 1, mergedStuff["Pos"])
+mergedStuff["Pos"] = np.where(mergedStuff["true_sentiment"] == 0, 0, mergedStuff["Pos"])
+
+mergedStuff["threshold"] = np.where((mergedStuff["Pos"] < 0.6) & (mergedStuff["Pos"] > 0.4), True, False)
+
+mergedStuff = mergedStuff[["id", "review", "Pos", "Neg", "threshold"]]
+#mergedStuff.to_excel("data/manual_classification.xlsx", index=False)
+
+# Some manual corrections could be added
+sum(mergedStuff["threshold"] == True)
+
+# Read back
+# Actually lost a bit of accuracy. My understanding of positive and negative is not strong enough
+# The gem of this boring reading:
+# "I've heard a lot about Porno Holocaust and its twin film Erotic Nights Of The Living Dead.
+# Both films are interchangeable and were filmed at the same time on the same location with
+# the same actors changing clothes for each film (and taking them off).
+# If you are expecting the D'Amato genius displayed in films like Buio Omega
+# or Death Smiles on Murder, you won't find it here. Nonetheless this film has a charm
+# that exploitation fans will not be able to resist. Where else will you see hardcore sex mixed
+# with a zombie/monster and his enormous penis that strangles and chokes women to death? Only from D'Amato.
+# There is some amount of gore in which many of the men are bludgeoned to death.
+# The film is set on a beautiful tropical island. As far as I know there is no subtitled version,
+# so if you don't speak Italian you wont know what is going on...but who cares right?
+# In all honesty, Gore fans will probably fast forward through the hardcore sex.
+# And if anyone is actually watching this for the sex only, will for sure be offended instantly.
+# I can just imagine modern day porn fans tracing back through D'Amato's output and coming across this atrocity!
+# Out of the two I find Erotic Nights Of The Living Dead far superior.
+# But, don't bother watching either if they are cut. Porno Holocaust is extremely low budget as expected.
+# Even the monster looks no where as good as George Eastman's character in Anthropophagus.
+# The film is worth watching for laughs and to complete your D'Amato film quest."
+essai = pd.read_excel("data/manual_classification.xlsx")
+
+essai["Pos"] = np.where(essai["true_sentiment"] == 1, 1, essai["Pos"])
+essai["Pos"] = np.where(essai["true_sentiment"] == -1, 0, essai["Pos"])
+
+#essai["sentiment"] = np.where(essai["Pos"] > essai["Neg"], 1, 0)
+#essai["sentiment"] = essai["Pos"]
+
+# This methods carry no goods because the missclassified drag the score down more than the well-classified
+#essai["sentiment"] = essai["Pos"]
+#essai["sentiment"] = np.where(essai["sentiment"] > 0.80, 1, essai["sentiment"])
+#essai["sentiment"] = np.where(essai["sentiment"] < 0.20, 0, essai["sentiment"])
 
 # Submission file
 submission = essai[["id", "sentiment"]]
-submission.to_csv("data/submission_cnn.csv", index=False, quoting=3)
+submission.to_csv("data/submission_cnn_padded_rounding.csv", index=False, quoting=3)
+
+
