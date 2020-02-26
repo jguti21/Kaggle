@@ -9,7 +9,7 @@ Regression Prediction, Tabular data
 Multi-classification problem, spatial data
 <br> Link: https://www.kaggle.com/c/sf-crime
 
-# Third Competition - Bag of Words Meets Bags of Popcorn (January 2019)
+# Third Competition - Bag of Words Meets Bags of Popcorn (January 2020)
 Simple classification, text data
 <br> Link: https://www.kaggle.com/c/word2vec-nlp-tutorial
 <br> Gavril: https://www.kaggle.com/gavrilpetrov/tutorial-1-bag-of-words
@@ -32,3 +32,5 @@ XGBOOST (Gavril)
 <br>LightGBM (Gavril)
 <br>RandomForest (Gavril)
 
+# Fourth Competition - BigQuery-Geotab Intersection Congestion(March 2020)
+Geographical data to predict congestion (traffic).
